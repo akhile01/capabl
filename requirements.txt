@@ -1,3 +1,13 @@
 # Requirements for AdaptEd
 # Add your dependencies here
 # e.g., fastapi, openai, sqlalchemy
+langchain
+langchain-community
+langchain-text-splitters
+langchain-google-genai
+pypdf
+chromadb
+pydantic
+pytest
+python-dotenv
+langchain-chroma
