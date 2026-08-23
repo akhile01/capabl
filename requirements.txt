@@ -1,0 +1,3 @@
+# Requirements for AdaptEd
+# Add your dependencies here
+# e.g., fastapi, openai, sqlalchemy
