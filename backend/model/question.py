@@ -36,3 +36,11 @@ class Question(BaseModel):
     explanation: Optional[str] = None
 
     source_chunk_id: Optional[str] = None
+
+    correct_answer_index: Optional[int] = None
+
+    validation_status: Optional[str] = None
+
+    validation_score: Optional[float] = None
+
+    generation_version: Optional[int] = None
