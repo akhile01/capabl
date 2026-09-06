@@ -22,3 +22,8 @@ An adaptive learning platform.
    ```bash
    cp .env.example .env
    ```
+
+## Agents
+- **Content Ingestion Agent**: Extracts, chunks, and stores educational materials using ChromaDB.
+- **Question Generation Agent**: Generates validated educational questions based on extracted chunks using Gemini.
+- **Socratic Evaluation Agent**: Evaluates student answers using a Socratic hint-first loop instead of immediately revealing the correct answer.
