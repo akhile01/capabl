@@ -49,5 +49,8 @@ Provide a concise educational explanation supported by the source. Explain why t
 OUTPUT
 Return the required structured schema only.
 Do not return conversational commentary.
+
+PRIOR QUESTIONS TO AVOID (Do NOT generate similar questions to these):
+{prior_questions}
 """
 )

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AdaptEd Practice</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="quiz-body">
+    <div class="app-container">
+        <header class="app-header">
+            <a href="/" class="back-link">← Back to Dashboard</a>
+            <h2>Adaptive Practice</h2>
+            <div id="current-topic-badge" class="badge">Loading...</div>
+        </header>
+
+        <main class="quiz-container">
+            <div id="loading-state" class="state-container">
+                <div class="spinner"></div>
+                <p>Analyzing mastery and selecting next question...</p>
+                <p id="selection-reason" class="reason-text"></p>
+            </div>
+
+            <div id="question-state" class="state-container hidden card">
+                <div class="question-header">
+                    <span id="q-difficulty" class="difficulty-badge">Medium</span>
+                </div>
+                <h3 id="question-text" class="question-title"></h3>
+                
+                <div id="options-container" class="options-grid">
+                    <!-- Options injected here -->
+                </div>
+                
+                <div id="feedback-container" class="feedback-box hidden">
+                    <!-- Socratic feedback injected here -->
+                </div>
+
+                <div class="quiz-actions">
+                    <button id="submit-btn" class="primary-btn" disabled>Submit Answer</button>
+                    <button id="next-btn" class="secondary-btn hidden">Next Question</button>
+                </div>
+            </div>
+            
+            <div id="error-state" class="state-container hidden">
+                <h3 class="error-text">Failed to load question</h3>
+                <button onclick="location.reload()" class="secondary-btn">Try Again</button>
+            </div>
+        </main>
+    </div>
+    <script src="/static/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            initQuiz();
+        });
+    </script>
+</body>
+</html>

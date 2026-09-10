@@ -133,7 +133,8 @@ class QuestionGenerationAgent:
                 subtopic="",
                 difficulty=difficulty,
                 question_type=question_type,
-                bloom_level=bloom_level or "Not specified"
+                bloom_level=bloom_level or "Not specified",
+                prior_questions=json.dumps(prior_questions) if prior_questions else "None"
             )
             
             try:
@@ -186,14 +187,14 @@ class QuestionGenerationAgent:
         logger.error("Max attempts reached. Failed to generate a valid question.")
         return None
         
-    def generate_questions(self, topic: str, count: int, difficulty: str, question_type: str = "mcq", bloom_level: Optional[str] = None) -> Dict[str, Any]:
+    def generate_questions(self, topic: str, count: int, difficulty: str, question_type: str = "mcq", bloom_level: Optional[str] = None, prior_questions: List[Dict] = None) -> Dict[str, Any]:
         
         context_str, docs = self._retrieve_context(topic, k=max(5, count * 2))
         if not docs:
             return {"status": "error", "message": "No context found"}
             
         valid_questions = []
-        prior_questions = []
+        prior_questions = prior_questions or []
         
         for _ in range(count):
             q = self.generate_single_question(

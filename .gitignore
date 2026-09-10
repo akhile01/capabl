@@ -22,3 +22,5 @@ env/
 
 # Local databases
 backend/database/
+data/*.db
+

@@ -11,3 +11,5 @@ pydantic
 pytest
 python-dotenv
 langchain-chroma
+fastapi
+uvicorn

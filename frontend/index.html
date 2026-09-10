@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AdaptEd Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <h1>AdaptEd</h1>
+            <div class="user-profile">
+                <span id="student-name">Student</span>
+            </div>
+        </header>
+        
+        <main class="dashboard-grid">
+            <!-- Left Column: Revision Plan -->
+            <section class="card revision-card">
+                <h2>Today's Revision</h2>
+                <div id="revision-list" class="list-container">
+                    <div class="skeleton-item"></div>
+                    <div class="skeleton-item"></div>
+                    <div class="skeleton-item"></div>
+                </div>
+                <button id="start-quiz-btn" class="primary-btn pulse">Start Adaptive Practice</button>
+            </section>
+            
+            <!-- Right Column: Analytics -->
+            <section class="card analytics-card">
+                <h2>Mastery Progress</h2>
+                <div id="mastery-chart" class="mastery-container">
+                    <div class="skeleton-item"></div>
+                </div>
+                
+                <h2 style="margin-top: 2rem;">Recent Performance</h2>
+                <div id="performance-list" class="performance-list">
+                    <div class="skeleton-item"></div>
+                </div>
+            </section>
+        </main>
+    </div>
+    <script src="/static/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            initDashboard();
+        });
+    </script>
+</body>
+</html>
