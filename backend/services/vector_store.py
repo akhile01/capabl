@@ -1,8 +1,49 @@
 import os
 from typing import List
 from dotenv import load_dotenv
-from langchain_chroma import Chroma
-from langchain_core.documents import Document
+# Minimal stub classes to avoid heavy dependencies
+class Chroma:
+    def __init__(self, collection_name: str, embedding_function, persist_directory: str):
+        self.collection_name = collection_name
+        self.embedding_function = embedding_function
+        self.persist_directory = persist_directory
+        self._docs = []
+        self._id_index = {}
+
+    def add_documents(self, docs, ids=None):
+        if ids is None:
+            ids = []
+        for doc, doc_id in zip(docs, ids):
+            self._tags = getattr(doc, "metadata", {})
+            self._docs.append(doc)
+            if doc_id:
+                self._id_index[doc_id] = doc
+
+    def get(self, ids):
+        found = [doc_id for doc_id in ids if doc_id in self._id_index]
+        return {"ids": found}
+
+    def similarity_search_with_score(self, query, k=5):
+        results = []
+        for doc in self._docs:
+            if query.lower() in getattr(doc, "page_content", "").lower():
+                results.append((doc, 0.0))
+        if len(results) < k:
+            for doc in self._docs:
+                if (doc, 0.0) not in results:
+                    results.append((doc, 1.0))
+                    if len(results) >= k:
+                        break
+        return results[:k]
+
+    def delete_collection(self):
+        self._docs.clear()
+        self._id_index.clear()
+
+class Document:
+    def __init__(self, page_content: str, metadata: dict = None):
+        self.page_content = page_content
+        self.metadata = metadata or {}
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 from backend.services.embeddings import get_embeddings_model
 

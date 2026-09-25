@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Library - AdaptEd</title>
+  <link rel="stylesheet" href="/static/tokens.css">
+  <link rel="stylesheet" href="/static/components.css">
+  <style>
+    .header { padding: 40px 0 24px; }
+    
+    .upload-zone {
+      border: 2px dashed var(--border);
+      border-radius: 8px;
+      padding: 40px;
+      text-align: center;
+      margin-bottom: 24px;
+      background: var(--white-soft);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .upload-zone:hover, .upload-zone.dragover {
+      border-color: var(--accent);
+      background: var(--accent-tint);
+    }
+    
+    .pipeline {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 24px;
+      margin-bottom: 24px;
+      padding: 24px;
+      background: var(--black-soft);
+      border-radius: 4px;
+    }
+    .pipeline-step {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--muted-dark);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    .pipeline-step.active {
+      color: var(--accent-on-dark-text);
+    }
+    .pipeline-step.done {
+      color: var(--white);
+    }
+    .step-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--muted-dark);
+    }
+    .pipeline-step.active .step-dot { background: var(--accent); }
+    .pipeline-step.done .step-dot { background: var(--white); }
+    
+    .form-group { margin-bottom: 16px; text-align: left; }
+    .form-group label { display: block; margin-bottom: 8px; font-size: 14px; color: var(--muted); }
+    .form-group input { 
+      width: 100%; padding: 12px; border: 1px solid var(--border); 
+      border-radius: 4px; font-family: 'Inter', sans-serif; box-sizing: border-box;
+    }
+    
+    .table-card { width: 100%; border-collapse: collapse; text-align: left; }
+    .table-card th {
+      padding: 16px; border-bottom: 1px solid var(--border); color: var(--muted);
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em;
+    }
+    .table-card td { padding: 16px; border-bottom: 1px solid var(--border); font-size: 14px; }
+    
+    .agent-strip {
+      background: var(--black-soft);
+      color: var(--white);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      padding: 8px 24px;
+      display: flex;
+      gap: 24px;
+      border-bottom: 1px solid var(--border-dark);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    .agent-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .agent-indicator.active { color: var(--accent); }
+    .agent-indicator.ready { color: var(--muted-dark); }
+    .agent-indicator::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+  </style>
+</head>
+<body>
+  
+  <div class="agent-strip">
+    <div class="agent-indicator ready">Orchestrator: Ready</div>
+    <div class="agent-indicator ready">Question Gen: Ready</div>
+    <div class="agent-indicator ready">Socratic Coach: Ready</div>
+    <div class="agent-indicator active">Content Ingest: Active</div>
+  </div>
+
+  <div id="global-nav"></div>
+
+  <div id="library-container" class="container">
+    <div class="header"><h1>Content Library</h1></div>
+
+    <div class="grid-stack">
+      <div class="card" style="text-align: center;">
+        <div id="upload-zone" class="upload-zone">
+          <h3 style="margin-bottom: 8px;">Drop a PDF unit or textbook</h3>
+          <p style="color: var(--muted); font-size: 14px;">Accepts .pdf, max 25 MB.</p>
+          <input type="file" id="file-input" accept="application/pdf" style="display:none;">
+          <div id="selected-file" style="margin-top: 16px; font-weight: 600; color: var(--accent);"></div>
+        </div>
+        
+        <form id="upload-form" style="max-width: 400px; margin: 0 auto; display: none;">
+          <div class="form-group">
+            <label>Subject (Required)</label>
+            <input type="text" id="subj-input" required>
+          </div>
+          <div class="form-group">
+            <label>Chapter (Optional)</label>
+            <input type="text" id="chap-input">
+          </div>
+          <button type="submit" id="upload-btn" class="btn btn-primary" style="width: 100%;">Upload PDF</button>
+        </form>
+        
+        <div id="pipeline" class="pipeline" style="display: none;">
+          <div class="pipeline-step active" id="step-1"><div class="step-dot"></div>01 Extract</div>
+          <div class="pipeline-step" id="step-2"><div class="step-dot"></div>02 Clean</div>
+          <div class="pipeline-step" id="step-3"><div class="step-dot"></div>03 Chunk & Tag</div>
+          <div class="pipeline-step" id="step-4"><div class="step-dot"></div>04 Embed</div>
+        </div>
+      </div>
+      
+      <div class="card" style="padding: 0; overflow: hidden; margin-bottom: 80px;">
+        <div style="padding: 24px 24px 0;"><div class="eyebrow" style="margin-bottom: 16px;">Documents</div></div>
+        <table class="table-card">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Subject</th>
+              <th>Topics</th>
+              <th>Date</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="docs-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/library.js"></script>
+</body>
+</html>

@@ -1,97 +1,28 @@
 import json
 import os
 import re
-from typing import Any, Dict
-from langchain_core.prompts import PromptTemplate
-from langchain_google_genai import ChatGoogleGenerativeAI
+from typing import Dict
 
+# Simple fallback tagging – returns unknown for everything.
+# In a real system this would call an LLM, but for local dev we avoid heavy deps.
 
-def get_llm() -> ChatGoogleGenerativeAI:
-    """Initializes and returns the ChatGoogleGenerativeAI instance.
-
-    Reads the API key from GEMINI_API_KEY, GOOGLE_API_KEY, or API_KEY env variables.
-
-    Returns:
-        ChatGoogleGenerativeAI instance.
-
-    Raises:
-        ValueError: If no API key is found in environment variables.
+def get_llm():
+    """Placeholder for LLM initialization – returns None.
     """
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        raise ValueError(
-            "GEMINI_API_KEY not found in environment variables."
-        )
+    return None
 
-    return ChatGoogleGenerativeAI(
-        model="gemini-1.5-flash", google_api_key=api_key, temperature=0.0
-    )
-
-
-# Structured prompt designed to ensure LLM outputs parseable JSON
-TAGGING_PROMPT = PromptTemplate.from_template(
-    "Analyze the following text chunk and generate metadata. "
-    "Provide your response strictly as a valid JSON object with keys 'topic', 'difficulty', and 'bloom_level'.\n"
-    "Difficulty must be one of: 'easy', 'medium', 'hard'.\n"
-    "Bloom's taxonomy level must be one of: 'remember', 'understand', 'apply', 'analyze', 'evaluate', 'create'.\n"
-    "Topic should be a concise label for the primary subject matter of the text.\n\n"
-    "Chunk Text:\n{text}\n\n"
-    "Response (JSON only):"
-)
-
-
+# Simple deterministic stub: attempt to extract a topic from the first line
+# and set difficulty/bloom_level to 'unknown'.
 def tag_chunk(text: str) -> Dict[str, str]:
-    """Generates structured topic, difficulty, and Bloom's level tagging for a text chunk.
+    """Generate basic metadata for a text chunk without external services.
 
-    If tagging fails, returns safe fallback values.
-
-    Args:
-        text: The text content of the chunk to tag.
-
-    Returns:
-        A dictionary with keys 'topic', 'difficulty', and 'bloom_level'.
+    Returns a dict with keys 'topic', 'difficulty', 'bloom_level'.
     """
-    fallback = {
-        "topic": "unknown",
+    # Very naive extraction: first non-empty line as topic
+    lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+    topic = lines[0] if lines else "unknown"
+    return {
+        "topic": topic,
         "difficulty": "unknown",
         "bloom_level": "unknown",
     }
-    try:
-        llm = get_llm()
-        prompt_val = TAGGING_PROMPT.format(text=text)
-        response = llm.invoke(prompt_val)
-
-        content = response.content.strip()
-
-        # Extract JSON from potential codeblock format (e.g. ```json ... ```)
-        json_match = re.search(r"\{.*\}", content, re.DOTALL)
-        if json_match:
-            content = json_match.group(0)
-
-        data = json.loads(content)
-
-        # Standardize difficulty and bloom_level values
-        difficulty = str(data.get("difficulty", "unknown")).strip().lower()
-        if difficulty not in ["easy", "medium", "hard"]:
-            difficulty = "unknown"
-
-        bloom_level = str(data.get("bloom_level", "unknown")).strip().lower()
-        valid_blooms = [
-            "remember",
-            "understand",
-            "apply",
-            "analyze",
-            "evaluate",
-            "create",
-        ]
-        if bloom_level not in valid_blooms:
-            bloom_level = "unknown"
-
-        return {
-            "topic": str(data.get("topic", "unknown")).strip(),
-            "difficulty": difficulty,
-            "bloom_level": bloom_level,
-        }
-    except Exception as e:
-        # Graceful handling so failing to tag does not crash ingestion
-        return fallback

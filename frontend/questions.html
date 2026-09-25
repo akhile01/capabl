@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Questions - AdaptEd</title>
+  <link rel="stylesheet" href="/static/tokens.css">
+  <link rel="stylesheet" href="/static/components.css">
+  <style>
+    .header { padding: 40px 0 24px; display: flex; justify-content: space-between; align-items: center; }
+    
+    .filters-bar {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    .filter-input {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: var(--white);
+      font-family: 'Inter', sans-serif;
+    }
+    
+    .question-card { margin-bottom: 24px; }
+    .q-meta { display: flex; gap: 8px; margin-bottom: 16px; }
+    .q-text { font-size: 18px; font-weight: 600; margin-bottom: 16px; }
+    
+    .q-option {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      margin-bottom: 8px;
+    }
+    .q-option.is-correct {
+      background: var(--success-tint);
+      border-color: var(--success);
+    }
+    
+    .q-details {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px dashed var(--border);
+      font-size: 14px;
+    }
+    .score-meter {
+      height: 4px; width: 100px; background: var(--border); border-radius: 2px;
+      display: inline-block; vertical-align: middle; margin-left: 8px;
+    }
+    .score-fill { height: 100%; border-radius: 2px; }
+    
+    .actions { display: flex; justify-content: flex-end; gap: 16px; margin-top: 16px; }
+    
+    .modal-overlay {
+      position: fixed; top:0; left:0; right:0; bottom:0;
+      background: rgba(12,12,12,0.5); display: none;
+      align-items: center; justify-content: center;
+      z-index: 100;
+    }
+    .modal {
+      background: var(--white); padding: 32px; border-radius: 8px;
+      width: 100%; max-width: 400px;
+    }
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; margin-bottom: 8px; font-size: 14px; font-weight: 600; }
+    .form-group input, .form-group select { width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px; box-sizing: border-box; }
+    
+    .agent-strip {
+      background: var(--black-soft);
+      color: var(--white);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      padding: 8px 24px;
+      display: flex;
+      gap: 24px;
+      border-bottom: 1px solid var(--border-dark);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    .agent-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .agent-indicator.active { color: var(--accent); }
+    .agent-indicator.ready { color: var(--muted-dark); }
+    .agent-indicator::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+  </style>
+</head>
+<body>
+  
+  <div class="agent-strip">
+    <div class="agent-indicator ready">Orchestrator: Ready</div>
+    <div class="agent-indicator active">Question Gen: Active</div>
+    <div class="agent-indicator ready">Socratic Coach: Ready</div>
+    <div class="agent-indicator ready">Content Ingest: Idle</div>
+  </div>
+
+  <div id="global-nav"></div>
+
+  <div id="questions-container" class="container">
+    <div class="header">
+      <h1>Question Bank</h1>
+      <button id="open-gen-modal" class="btn btn-primary">Generate questions</button>
+    </div>
+    
+    <div class="filters-bar">
+      <input type="text" id="filt-subject" class="filter-input" placeholder="Subject">
+      <input type="text" id="filt-topic" class="filter-input" placeholder="Topic">
+      <select id="filt-difficulty" class="filter-input">
+        <option value="">Any Difficulty</option>
+        <option value="easy">Easy</option>
+        <option value="medium">Medium</option>
+        <option value="hard">Hard</option>
+      </select>
+      <button id="apply-filters" class="btn btn-secondary" style="min-height: 38px;">Filter</button>
+    </div>
+    
+    <div id="view-loading" class="view-state active">
+      <div class="card skeleton" style="height: 200px; margin-bottom: 24px;"></div>
+      <div class="card skeleton" style="height: 200px;"></div>
+    </div>
+    
+    <div id="view-empty" class="view-state empty-state">
+      <h2>No questions found</h2>
+      <p style="color: var(--muted);">Generate some or change filters.</p>
+    </div>
+    
+    <div id="view-loaded" class="view-state" style="margin-bottom: 80px;">
+      <div id="q-list"></div>
+    </div>
+  </div>
+
+  <div id="gen-modal" class="modal-overlay">
+    <div class="modal">
+      <h2 style="margin-bottom: 24px;">Generate Questions</h2>
+      <form id="gen-form">
+        <div class="form-group">
+          <label>Topic</label>
+          <input type="text" id="gen-topic" required>
+        </div>
+        <div class="form-group">
+          <label>Difficulty</label>
+          <select id="gen-diff">
+            <option value="easy">Easy</option>
+            <option value="medium">Medium</option>
+            <option value="hard">Hard</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Count (1-10)</label>
+          <input type="number" id="gen-count" min="1" max="10" value="1" required>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 16px; margin-top: 24px;">
+          <button type="button" id="close-modal" class="btn btn-ghost">Cancel</button>
+          <button type="submit" id="submit-gen" class="btn btn-primary">Generate</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/questions.js"></script>
+</body>
+</html>

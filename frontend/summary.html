@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Summary - AdaptEd</title>
+  <link rel="stylesheet" href="/static/tokens.css">
+  <link rel="stylesheet" href="/static/components.css">
+  <style>
+    .summary-header {
+      text-align: center;
+      padding: 60px 24px;
+    }
+    .big-stat {
+      font-size: 64px;
+      font-weight: 700;
+      margin-bottom: 24px;
+      font-family: 'Space Grotesk', sans-serif;
+    }
+    .big-stat span {
+      color: var(--accent);
+    }
+    .table-card {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+    .table-card th {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+      color: var(--muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+    }
+    .table-card td {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+    }
+    .actions {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      margin-top: 40px;
+      margin-bottom: 80px;
+    }
+    .agent-strip {
+      background: var(--black-soft);
+      color: var(--white);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      padding: 8px 24px;
+      display: flex;
+      gap: 24px;
+      border-bottom: 1px solid var(--border-dark);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    .agent-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .agent-indicator.active { color: var(--accent); }
+    .agent-indicator.ready { color: var(--muted-dark); }
+    .agent-indicator::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+  </style>
+</head>
+<body>
+  
+  <div class="agent-strip">
+    <div class="agent-indicator active">Orchestrator: Active</div>
+    <div class="agent-indicator ready">Question Gen: Ready</div>
+    <div class="agent-indicator ready">Socratic Coach: Ready</div>
+    <div class="agent-indicator ready">Content Ingest: Idle</div>
+  </div>
+
+  <div id="global-nav"></div>
+
+  <div class="container" style="max-width: 800px;">
+    
+    <div id="view-loading" class="view-state active">
+      <div class="summary-header">
+        <div class="skeleton" style="height: 80px; width: 300px; margin: 0 auto;"></div>
+      </div>
+      <div class="card skeleton" style="height: 300px;"></div>
+    </div>
+
+    <div id="view-loaded" class="view-state">
+      <div class="summary-header">
+        <div class="big-stat" id="score-stat"><span>0</span> / 0 correct</div>
+        <p style="color: var(--muted-dark);">Session Complete</p>
+      </div>
+
+      <div class="card" style="padding: 0; overflow: hidden;">
+        <table class="table-card">
+          <thead>
+            <tr>
+              <th>Topic</th>
+              <th>Questions</th>
+              <th>Correct</th>
+              <th>Hints Used</th>
+              <th>Mastery</th>
+            </tr>
+          </thead>
+          <tbody id="summary-tbody">
+          </tbody>
+        </table>
+      </div>
+
+      <div class="actions">
+        <a href="/" class="btn btn-secondary">Back to Dashboard</a>
+        <button id="practice-again" class="btn btn-primary">Practice again</button>
+      </div>
+    </div>
+    
+  </div>
+
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/summary.js"></script>
+</body>
+</html>
