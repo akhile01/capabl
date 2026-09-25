@@ -76,18 +76,24 @@ class OrchestratorAgent:
         
         return revision_list
 
-    def get_next_question(self, student_id: str, subject: str = "Unknown") -> Dict[str, Any]:
+    def get_next_question(self, student_id: str, subject: str = "Unknown", topic: Optional[str] = None) -> Dict[str, Any]:
         """
         Determines the next topic and fetches/generates a question.
         Priority:
-        1. Due topics.
-        2. Weak topics.
-        3. Random available topic.
+        1. Explicit topic provided.
+        2. Due topics.
+        3. Weak topics.
+        4. Random available topic.
         """
         revision_list = self.get_todays_revision(student_id, subject)
         
         # Select topic
-        if revision_list:
+        if topic:
+            selected_topic = topic
+            # Find mastery from revision list or fetch it
+            rev_match = next((r for r in revision_list if r["topic"] == topic), None)
+            mastery = rev_match["mastery_level"] if rev_match else 0.0
+        elif revision_list:
             selected_topic = revision_list[0]["topic"]
             mastery = revision_list[0]["mastery_level"]
         else:

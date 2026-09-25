@@ -72,6 +72,19 @@ def init_db():
         )
     """)
     
+    # Ingested documents table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS ingested_documents (
+            id TEXT PRIMARY KEY,
+            filename TEXT NOT NULL,
+            subject TEXT,
+            chapters TEXT,
+            extracted_topics TEXT,
+            status TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    
     conn.commit()
     conn.close()
 

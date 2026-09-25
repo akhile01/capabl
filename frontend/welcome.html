@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome - AdaptEd</title>
+  <link rel="stylesheet" href="/static/tokens.css">
+  <link rel="stylesheet" href="/static/components.css">
+  <style>
+    .hero-section {
+      padding: 80px 24px;
+      text-align: center;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+    .hero-section h1 {
+      max-width: 600px;
+      margin-bottom: 24px;
+    }
+    .hero-section h1 span {
+      color: var(--accent);
+    }
+    .agent-chips {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      margin-bottom: 48px;
+    }
+    .agent-chip {
+      background: var(--black-soft);
+      border: 1px solid var(--border-dark);
+      padding: 8px 16px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+    }
+    .agent-chip::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+    .onboarding-form {
+      background: var(--black-soft);
+      padding: 32px;
+      border: 1px solid var(--border-dark);
+      border-radius: 4px;
+      width: 100%;
+      max-width: 400px;
+      text-align: left;
+      margin-bottom: 24px;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--muted-dark);
+      font-size: 14px;
+    }
+    .form-group input, .form-group select {
+      width: 100%;
+      padding: 12px;
+      background: var(--white-soft);
+      border: 1px solid transparent;
+      border-radius: 4px;
+      font-family: 'Inter', sans-serif;
+      box-sizing: border-box;
+    }
+    .explainer {
+      padding: 80px 24px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .step {
+      display: flex;
+      gap: 24px;
+      margin-bottom: 40px;
+    }
+    .step-num {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--accent);
+      font-size: 24px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body class="dark-section">
+  
+  <div class="hero-section">
+    <h1>Learn smarter, not <span>longer</span>.</h1>
+    
+    <div class="agent-chips">
+      <div class="agent-chip">Ingest</div>
+      <div class="agent-chip">Generate</div>
+      <div class="agent-chip">Coach</div>
+    </div>
+
+    <form id="onboarding-form" class="onboarding-form">
+      <div class="form-group">
+        <label for="student-name">Your Name</label>
+        <input type="text" id="student-name" required minlength="1" maxlength="40" placeholder="e.g. Alex">
+      </div>
+      <div class="form-group">
+        <label for="subject-select">Subject</label>
+        <input type="text" id="subject-select" required placeholder="e.g. Database Systems">
+      </div>
+      <button type="submit" class="btn btn-primary" style="width: 100%;">Start learning</button>
+    </form>
+
+    <a href="#how-it-works" class="btn btn-ghost" style="color: var(--muted-dark);">How it works ↓</a>
+  </div>
+
+  <div id="how-it-works" class="explainer">
+    <div class="eyebrow" style="margin-bottom: 32px;">The Process</div>
+    
+    <div class="step">
+      <div class="step-num">01</div>
+      <div>
+        <h3>Ingest</h3>
+        <p>The Content Ingestion agent extracts, cleans, chunks, and tags your study material.</p>
+      </div>
+    </div>
+    
+    <div class="step">
+      <div class="step-num">02</div>
+      <div>
+        <h3>Generate</h3>
+        <p>The Question Generation agent creates grounded questions and self-critiques them to ensure high quality.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">03</div>
+      <div>
+        <h3>Coach</h3>
+        <p>The Socratic Evaluation agent gives hints instead of straight answers to build true understanding.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">04</div>
+      <div>
+        <h3>Schedule</h3>
+        <p>The Orchestrator agent schedules your revision using SM-2 spaced repetition for maximum retention.</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/welcome.js"></script>
+</body>
+</html>

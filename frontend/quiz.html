@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<<<<<<< HEAD
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Adaptive Practice | AdaptEd</title>
@@ -177,5 +178,238 @@
 
     <script src="/static/app.js"></script>
     <script src="/static/quiz.js"></script>
+=======
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Practice - AdaptEd</title>
+  <link rel="stylesheet" href="/static/tokens.css">
+  <link rel="stylesheet" href="/static/components.css">
+  <style>
+    .quiz-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 24px 0;
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+    .back-link {
+      color: var(--black);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .reason-strip {
+      background: var(--white-soft);
+      padding: 12px 24px;
+      margin-bottom: 32px;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--muted);
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .reason-strip::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      background-color: var(--accent);
+      border-radius: 50%;
+    }
+    .question-card {
+      padding: 40px;
+      margin-bottom: 24px;
+    }
+    .question-text {
+      font-size: 22px;
+      margin-bottom: 32px;
+    }
+    .options-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .option-btn {
+      width: 100%;
+      text-align: left;
+      justify-content: flex-start;
+      border: 1px solid var(--border);
+      background: var(--white);
+      color: var(--black);
+      padding: 16px 24px;
+      border-radius: 8px;
+      font-weight: 400;
+      min-height: auto;
+      font-size: 16px;
+      position: relative;
+    }
+    .option-letter {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: bold;
+      margin-right: 16px;
+      color: var(--muted);
+    }
+    
+    .option-btn:hover:not(:disabled) {
+      border-color: var(--accent);
+    }
+    .option-btn.selected {
+      border-color: var(--accent);
+      background: var(--accent-tint);
+    }
+    .option-btn.locked-wrong {
+      background: var(--error-tint);
+      border-color: var(--error-tint);
+      text-decoration: line-through;
+      color: var(--muted);
+      cursor: not-allowed;
+    }
+    .option-btn.correct {
+      background: var(--success-tint);
+      border-color: var(--success);
+    }
+    
+    .feedback-panel {
+      padding: 24px;
+      border-radius: 4px;
+      margin-top: 24px;
+      margin-bottom: 24px;
+    }
+    .feedback-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600;
+      font-size: 18px;
+      margin-bottom: 8px;
+    }
+    .panel-retry {
+      background: var(--accent-tint);
+      border-left: 4px solid var(--accent);
+    }
+    .panel-success {
+      background: var(--success-tint);
+      border-left: 4px solid var(--success);
+    }
+    .panel-error {
+      background: var(--error-tint);
+      border-left: 4px solid var(--error);
+    }
+    
+    .footer-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 80px;
+    }
+    
+    .rotating-copy {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--accent);
+      text-align: center;
+      margin-top: 24px;
+    }
+
+    .agent-strip {
+      background: var(--black-soft);
+      color: var(--white);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      padding: 8px 24px;
+      display: flex;
+      gap: 24px;
+      border-bottom: 1px solid var(--border-dark);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    .agent-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .agent-indicator.active { color: var(--accent); }
+    .agent-indicator.ready { color: var(--muted-dark); }
+    .agent-indicator::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+    
+  </style>
+</head>
+<body>
+  
+  <div class="agent-strip">
+    <div class="agent-indicator ready">Orchestrator: Ready</div>
+    <div class="agent-indicator ready">Question Gen: Ready</div>
+    <div class="agent-indicator active">Socratic Coach: Active</div>
+    <div class="agent-indicator ready">Content Ingest: Idle</div>
+  </div>
+
+  <div id="global-nav"></div>
+
+  <div class="container" style="max-width: 800px;">
+    
+    <div class="quiz-header">
+      <div class="header-left">
+        <a href="/" class="back-link">← Back</a>
+        <span id="topic-badge" class="badge badge-accent"></span>
+        <span id="difficulty-badge" class="badge badge-warning"></span>
+      </div>
+      <div class="header-right">
+        <span id="attempt-counter" class="eyebrow" style="color: var(--muted);">Attempt 1 of 3</span>
+        <span id="q-counter" class="eyebrow">Q 1 / 10</span>
+        <a href="/quiz/summary" class="btn btn-ghost btn-ghost-small">End session</a>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="view-loading" class="view-state active">
+      <div class="reason-strip skeleton" style="height: 38px; border:none; width: 100%;"></div>
+      <div class="card question-card skeleton" style="height: 400px; border:none;"></div>
+      <div id="loading-text" class="rotating-copy">Checking your mastery...</div>
+    </div>
+
+    <!-- Error State -->
+    <div id="view-error" class="view-state empty-state">
+      <h2>Oops, something broke</h2>
+      <p id="error-msg" style="color: var(--error);"></p>
+      <button id="retry-btn" class="btn btn-secondary retry-btn">Try Again</button>
+    </div>
+
+    <!-- Loaded State -->
+    <div id="view-loaded" class="view-state">
+      <div id="reason-strip" class="reason-strip"></div>
+      
+      <div class="card question-card">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 16px;">
+          <div id="bloom-badge"></div>
+        </div>
+        <h2 id="question-text" class="question-text"></h2>
+        
+        <div id="options-container" class="options-grid"></div>
+      </div>
+      
+      <div id="feedback-container"></div>
+      
+      <div class="footer-actions">
+        <button id="submit-btn" class="btn btn-primary" disabled>Submit Answer</button>
+        <button id="next-btn" class="btn btn-primary" style="display: none;">Next Question</button>
+      </div>
+    </div>
+    
+  </div>
+
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/quiz.js"></script>
+>>>>>>> 0800c7dd2c8c5852e1d97ed7ed3ce40836820e44
 </body>
 </html>

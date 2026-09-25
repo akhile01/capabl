@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<<<<<<< HEAD
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AdaptEd - Progress</title>
@@ -228,5 +229,223 @@
 
     <script src="/static/app.js"></script>
     <script src="/static/progress.js"></script>
+=======
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Progress - AdaptEd</title>
+  <link rel="stylesheet" href="/static/tokens.css">
+  <link rel="stylesheet" href="/static/components.css">
+  <style>
+    .progress-header {
+      padding: 40px 0 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .mastery-row {
+      display: grid;
+      grid-template-columns: 200px 1fr 60px;
+      align-items: center;
+      gap: 16px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .mastery-row:last-child {
+      border-bottom: none;
+    }
+    .progress-bar-bg {
+      height: 8px;
+      background: var(--white-soft);
+      border-radius: 4px;
+      width: 100%;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+    }
+    .fill-warning { background: var(--warning); }
+    .fill-accent { background: var(--accent); }
+    .fill-success { background: var(--success); }
+    
+    .table-card {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+    .table-card th {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+      color: var(--muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+    }
+    .table-card td {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+    }
+    
+    .stat-card {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .stat-number {
+      font-size: 32px;
+      color: var(--accent);
+    }
+    
+    .filters {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .filter-pill {
+      padding: 4px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--white);
+      color: var(--black);
+      font-size: 12px;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+    }
+    .filter-pill.active {
+      background: var(--black);
+      color: var(--white);
+      border-color: var(--black);
+    }
+    
+    .agent-strip {
+      background: var(--black-soft);
+      color: var(--white);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      padding: 8px 24px;
+      display: flex;
+      gap: 24px;
+      border-bottom: 1px solid var(--border-dark);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    .agent-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .agent-indicator.active { color: var(--accent); }
+    .agent-indicator.ready { color: var(--muted-dark); }
+    .agent-indicator::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+  </style>
+</head>
+<body>
+  
+  <div class="agent-strip">
+    <div class="agent-indicator active">Orchestrator: Active</div>
+    <div class="agent-indicator ready">Question Gen: Ready</div>
+    <div class="agent-indicator ready">Socratic Coach: Ready</div>
+    <div class="agent-indicator ready">Content Ingest: Idle</div>
+  </div>
+
+  <div id="global-nav"></div>
+
+  <div id="progress-container" class="container">
+    
+    <div class="progress-header">
+      <h1>Progress</h1>
+      <button id="export-csv" class="btn btn-secondary">Export CSV</button>
+    </div>
+
+    <div id="view-loading" class="view-state active">
+      <div class="grid-stack">
+        <div class="grid-3">
+          <div class="card skeleton" style="height: 100px;"></div>
+          <div class="card skeleton" style="height: 100px;"></div>
+          <div class="card skeleton" style="height: 100px;"></div>
+        </div>
+        <div class="card skeleton" style="height: 400px;"></div>
+      </div>
+    </div>
+
+    <div id="view-error" class="view-state empty-state">
+      <h2>Something went wrong</h2>
+      <p id="error-msg" style="color: var(--error);"></p>
+    </div>
+
+    <div id="view-loaded" class="view-state">
+      <div class="grid-3" style="margin-bottom: 24px;">
+        <div class="card stat-card">
+          <div class="eyebrow">Accuracy (Easy)</div>
+          <div class="stat-number" id="acc-easy">-</div>
+        </div>
+        <div class="card stat-card">
+          <div class="eyebrow">Accuracy (Med)</div>
+          <div class="stat-number" id="acc-med">-</div>
+        </div>
+        <div class="card stat-card">
+          <div class="eyebrow">Accuracy (Hard)</div>
+          <div class="stat-number" id="acc-hard">-</div>
+        </div>
+      </div>
+      
+      <div class="card stat-card" style="margin-bottom: 24px;">
+        <div class="eyebrow">Hint Usage Rate</div>
+        <div class="stat-number" id="hint-rate">-</div>
+      </div>
+
+      <div class="card" style="margin-bottom: 24px;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 16px;">
+          <div class="eyebrow">Mastery per topic</div>
+          <button id="sort-mastery" class="btn btn-ghost btn-ghost-small">Sort by Mastery</button>
+        </div>
+        <div id="mastery-chart"></div>
+      </div>
+
+      <div class="card" style="padding: 0; overflow: hidden; margin-bottom: 80px;">
+        <div style="padding: 24px 24px 0;">
+          <div class="eyebrow" style="margin-bottom: 16px;">Activity Log</div>
+          <div class="filters" id="activity-filters">
+            <button class="filter-pill active" data-filter="all">All</button>
+            <button class="filter-pill" data-filter="correct">Correct</button>
+            <button class="filter-pill" data-filter="incorrect">Incorrect</button>
+          </div>
+        </div>
+        
+        <table class="table-card">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Topic</th>
+              <th>Diff</th>
+              <th>Result</th>
+              <th>Hint</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="activity-tbody">
+          </tbody>
+        </table>
+        <div id="pagination" style="padding: 16px 24px; display: flex; justify-content: space-between;">
+          <button id="prev-page" class="btn btn-ghost btn-ghost-small" disabled>← Prev</button>
+          <span id="page-info" style="font-size: 14px; color: var(--muted);">Page 1</span>
+          <button id="next-page" class="btn btn-ghost btn-ghost-small" disabled>Next →</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/progress.js"></script>
+>>>>>>> 0800c7dd2c8c5852e1d97ed7ed3ce40836820e44
 </body>
 </html>
