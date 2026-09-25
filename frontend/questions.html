@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AdaptEd - Questions</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/questions.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="agent-strip">
+        <div class="agent-strip-inner">
+            <span class="agent-status active"><span class="indicator">●</span> ORCHESTRATOR ACTIVE</span>
+            <span class="agent-status"><span class="indicator">✓</span> QUESTION GEN READY</span>
+            <span class="agent-status"><span class="indicator">✓</span> SOCRATIC COACH READY</span>
+            <span class="agent-status"><span class="indicator">•</span> CONTENT INGEST IDLE</span>
+        </div>
+    </div>
+
+    <nav class="global-nav">
+        <div class="nav-left">
+            <div class="logo">AdaptEd</div>
+            <div class="nav-links">
+                <a href="/">Dashboard</a>
+                <a href="/quiz">Practice</a>
+                <a href="/progress">Progress</a>
+                <a href="/library">Library</a>
+                <a href="/static/questions.html" class="active">Questions</a>
+            </div>
+        </div>
+        <div class="nav-right">
+            <div class="subject-selector">DATABASE SYSTEMS</div>
+            <div class="user-avatar" id="nav-avatar">R</div>
+        </div>
+    </nav>
+
+    <div class="app-container questions-container">
+        <!-- Question Bank Overview List (Desktop & Mobile) -->
+        <div id="qb-list-view">
+            <header class="library-header qb-header">
+                <div>
+                    <div class="eyebrow">QUESTION BANK</div>
+                    <h1 class="page-title">Questions generated and organized by AdaptEd.</h1>
+                    <p class="page-subtitle">Explore questions, review your performance, and understand what you're being assessed on.</p>
+                </div>
+            </header>
+
+            <div class="qb-analytics" id="qb-analytics">
+                <div class="stat-box"><div class="stat-val skeleton" id="stat-total">--</div><div class="stat-label">TOTAL QUESTIONS</div></div>
+                <div class="stat-box"><div class="stat-val skeleton" id="stat-attempted">--</div><div class="stat-label">ATTEMPTED</div></div>
+                <div class="stat-box"><div class="stat-val skeleton" id="stat-accuracy">--%</div><div class="stat-label">ACCURACY</div></div>
+                <div class="stat-box"><div class="stat-val skeleton highlight-volt" id="stat-review">--</div><div class="stat-label">NEEDS REVIEW</div></div>
+            </div>
+
+            <div class="qb-controls">
+                <div class="qb-search-wrap">
+                    <input type="text" class="search-input" placeholder="Search questions, topics, or question IDs..." id="qb-search">
+                </div>
+                <div class="qb-filters" id="qb-filters">
+                    <select class="filter-select skeleton-bg" id="filter-subject"><option value="">All Subjects ▾</option></select>
+                    <select class="filter-select skeleton-bg" id="filter-topic"><option value="">All Topics ▾</option></select>
+                    <select class="filter-select skeleton-bg" id="filter-diff"><option value="">Difficulty ▾</option></select>
+                    <select class="filter-select skeleton-bg" id="filter-status"><option value="">Status ▾</option></select>
+                    <select class="filter-select skeleton-bg" id="filter-sort"><option value="">Sort ▾</option></select>
+                </div>
+            </div>
+
+            <!-- List State -->
+            <div class="qb-list" id="qb-list">
+                <!-- Skeletons loaded by JS initially -->
+            </div>
+
+            <!-- Empty / Error States -->
+            <div class="qb-empty hidden" id="qb-empty">
+                <h2 class="empty-title">YOUR QUESTION BANK IS EMPTY</h2>
+                <p class="empty-desc">Questions generated through AdaptEd will appear here.</p>
+                <button class="btn-primary" onclick="window.location.href='/quiz'">GO TO PRACTICE &rarr;</button>
+            </div>
+            
+            <div class="qb-empty hidden" id="qb-error">
+                <h2 class="empty-title">QUESTIONS UNAVAILABLE</h2>
+                <p class="empty-desc">We couldn't retrieve your question bank.</p>
+                <button class="btn-secondary" onclick="fetchQuestions()">TRY AGAIN</button>
+            </div>
+            
+            <div class="qb-empty hidden" id="qb-no-results">
+                <h2 class="empty-title">NO QUESTIONS FOUND</h2>
+                <p class="empty-desc">Try a different search term or remove some filters.</p>
+                <button class="btn-secondary" onclick="clearFilters()">CLEAR FILTERS</button>
+            </div>
+        </div>
+
+        <!-- Question Detail View (Hidden by Default) -->
+        <div id="qb-detail-view" class="hidden">
+            <div class="qb-detail-nav">
+                <button class="btn-back" onclick="closeDetailView()">&larr; Back to Questions</button>
+                <div class="qb-detail-meta-top">
+                    <span id="detail-id" class="q-id">Q-000</span>
+                    <span id="detail-subject" class="q-subject clickable" role="button" tabindex="0" onclick="filterBySubject(this.innerText)" onkeydown="if(event.key==='Enter'||event.key===' ') filterBySubject(this.innerText)">Subject</span>
+                    <span id="detail-topic" class="q-topic clickable" role="button" tabindex="0" onclick="filterByTopic(this.innerText)" onkeydown="if(event.key==='Enter'||event.key===' ') filterByTopic(this.innerText)">Topic</span>
+                    <span id="detail-diff" class="q-diff">Easy</span>
+                </div>
+            </div>
+
+            <div class="qb-detail-content">
+                <div class="qb-detail-main">
+                    <h2 class="qb-detail-text" id="detail-text">Question text goes here.</h2>
+                    
+                    <div class="qb-detail-options" id="detail-options">
+                        <!-- Options generated by JS -->
+                    </div>
+
+                    <div class="qb-detail-result hidden" id="detail-result">
+                        <div class="result-header">
+                            <span class="result-status" id="detail-result-status">✓ CORRECT</span>
+                        </div>
+                        <div class="result-body">
+                            <span class="result-label">Your answer:</span>
+                            <span class="result-answer" id="detail-your-answer">Answer</span>
+                        </div>
+                    </div>
+                    
+                    <div class="qb-detail-explanation hidden" id="detail-explanation">
+                        <h4 class="explanation-title">WHY?</h4>
+                        <p class="explanation-text" id="detail-explanation-text">Explanation.</p>
+                    </div>
+                    
+                    <div class="qb-detail-unattempted hidden" id="detail-unattempted">
+                        <div class="unattempted-label">• NOT ATTEMPTED</div>
+                    </div>
+                </div>
+                
+                <div class="qb-detail-sidebar">
+                    <div class="sidebar-section hidden" id="detail-adaptive">
+                        <div class="sidebar-title">ADAPTIVE CONTEXT</div>
+                        <div class="adaptive-reason" id="detail-adaptive-reason">Selected because: Your mastery is developing.</div>
+                    </div>
+
+                    <div class="sidebar-section hidden" id="detail-source">
+                        <div class="sidebar-title">SOURCE CONTEXT</div>
+                        <div class="source-name" id="detail-source-name">Notes.pdf</div>
+                    </div>
+                    
+                    <div class="sidebar-section">
+                        <div class="sidebar-title">METADATA</div>
+                        <div class="meta-row">
+                            <span class="meta-lbl">Type</span>
+                            <span class="meta-val" id="detail-type">MULTIPLE CHOICE</span>
+                        </div>
+                        <div class="meta-row">
+                            <span class="meta-lbl">Generated</span>
+                            <span class="meta-val">AI-GENERATED</span>
+                        </div>
+                    </div>
+                    
+                    <div class="sidebar-actions">
+                        <button class="btn-primary full-width" onclick="window.location.href='/quiz'">PRACTICE SIMILAR &rarr;</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+    <script src="/static/questions.js"></script>
+</body>
+</html>

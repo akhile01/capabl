@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AdaptEd - Library</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="agent-strip">
+        <div class="agent-strip-inner">
+            <span class="agent-status active"><span class="indicator">●</span> ORCHESTRATOR ACTIVE</span>
+            <span class="agent-status"><span class="indicator">✓</span> QUESTION GEN READY</span>
+            <span class="agent-status"><span class="indicator">✓</span> SOCRATIC COACH READY</span>
+            <span class="agent-status"><span class="indicator">•</span> CONTENT INGEST IDLE</span>
+        </div>
+    </div>
+
+    <nav class="global-nav">
+        <div class="nav-left">
+            <div class="logo">AdaptEd</div>
+            <div class="nav-links">
+                <a href="/">Dashboard</a>
+                <a href="/quiz">Practice</a>
+                <a href="/progress">Progress</a>
+                <a href="/library" class="active">Library</a>
+                <a href="/static/questions.html">Questions</a>
+            </div>
+        </div>
+        <div class="nav-right">
+            <div class="subject-selector">DATABASE SYSTEMS</div>
+            <div class="user-avatar" id="nav-avatar">R</div>
+        </div>
+    </nav>
+
+    <div class="app-container library-container">
+        <header class="library-header">
+            <div>
+                <div class="eyebrow">KNOWLEDGE LIBRARY</div>
+                <h1 class="page-title">Your Learning Library</h1>
+                <p class="page-subtitle">Your study material, organized and prepared for adaptive learning.</p>
+            </div>
+        </header>
+
+        <div class="library-actions">
+            <div class="action-left">
+                <input type="text" class="search-input" placeholder="Search your library..." id="lib-search">
+                <select class="filter-select"><option>All Subjects ▾</option></select>
+                <select class="filter-select"><option>All Status ▾</option></select>
+                <select class="filter-select"><option>Sort ▾</option></select>
+            </div>
+            <div class="action-right">
+                <button class="btn-primary" onclick="openUploadModal()">+ ADD MATERIAL</button>
+            </div>
+        </div>
+
+        <!-- Analytics Strip -->
+        <div class="analytics-strip" id="lib-analytics">
+            <div class="stat-box"><div class="stat-val" id="stat-materials">0</div><div class="stat-label">MATERIALS</div></div>
+            <div class="stat-box"><div class="stat-val" id="stat-ready">0</div><div class="stat-label">READY</div></div>
+            <div class="stat-box"><div class="stat-val" id="stat-subjects">0</div><div class="stat-label">SUBJECTS</div></div>
+            <div class="stat-box"><div class="stat-val" id="stat-processing">0</div><div class="stat-label">PROCESSING</div></div>
+        </div>
+
+        <div class="library-main">
+            <section class="material-section">
+                <div class="section-header">
+                    <h3 class="section-title">YOUR MATERIAL</h3>
+                </div>
+                
+                <div id="library-list-container">
+                    <div class="empty-library" id="empty-state">
+                        <div class="empty-icon">📂</div>
+                        <h2 class="empty-title">YOUR KNOWLEDGE BASE STARTS HERE</h2>
+                        <p class="empty-desc">Add your first learning material and AdaptEd will prepare it for adaptive learning.</p>
+                        <p class="empty-meta">Supported formats will depend on your current content ingestion system.</p>
+                        <button class="btn-primary" onclick="openUploadModal()">+ ADD LEARNING MATERIAL</button>
+                    </div>
+
+                    <div class="document-list hidden" id="document-list">
+                        <div class="doc-header-row">
+                            <div class="d-col d-name">DOCUMENT</div>
+                            <div class="d-col d-subj">SUBJECT</div>
+                            <div class="d-col d-stat">STATUS</div>
+                            <div class="d-col d-date">UPDATED</div>
+                            <div class="d-col d-act"></div>
+                        </div>
+                        <div id="doc-rows">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="subjects-section hidden" id="subjects-section">
+                <div class="section-header">
+                    <h3 class="section-title">YOUR SUBJECTS</h3>
+                </div>
+                <div class="subject-grid" id="subject-grid">
+                </div>
+            </section>
+
+            <section class="pipeline-section">
+                <div class="section-header">
+                    <h3 class="section-title">HOW YOUR MATERIAL BECOMES PRACTICE</h3>
+                </div>
+                <div class="pipeline-visual">
+                    <div class="pipe-step">
+                        <div class="pipe-title">CONTENT INGESTION</div>
+                        <div class="pipe-desc">Your material is processed.</div>
+                    </div>
+                    <div class="pipe-arr">&rarr;</div>
+                    <div class="pipe-step">
+                        <div class="pipe-title">KNOWLEDGE CONTEXT</div>
+                        <div class="pipe-desc">Relevant information becomes available to the learning system.</div>
+                    </div>
+                    <div class="pipe-arr">&rarr;</div>
+                    <div class="pipe-step">
+                        <div class="pipe-title">ADAPTIVE PRACTICE</div>
+                        <div class="pipe-desc">Questions can be generated from supported content.</div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Upload Modal -->
+    <div class="modal hidden" id="upload-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>ADD LEARNING MATERIAL</h2>
+                <button class="close-btn" onclick="closeUploadModal()">&times;</button>
+            </div>
+            <p class="modal-sub">Upload material that AdaptEd can use to build your learning context.</p>
+            
+            <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+                <div class="drop-icon">+</div>
+                <div class="drop-text">DROP YOUR MATERIAL HERE</div>
+                <div class="drop-sub">or choose a file</div>
+                <div class="drop-meta">PDF · DOCX · TXT</div>
+                <input type="file" id="file-input" class="hidden" accept=".pdf,.docx,.txt" onchange="handleFileSelect(event)">
+            </div>
+            
+            <div class="upload-state hidden" id="upload-state">
+                <div class="up-filename" id="up-filename"></div>
+                <div class="up-status" id="up-status">UPLOADING...</div>
+                <div class="up-progress">
+                    <div class="indeterminate-bar"></div>
+                </div>
+            </div>
+            
+            <div class="upload-error hidden" id="upload-error">
+                <div class="err-title">CONTENT COULD NOT BE PROCESSED</div>
+                <div class="err-desc">AdaptEd couldn't prepare this material. (Backend endpoint unavailable)</div>
+                <div class="err-actions">
+                    <button class="btn-primary" onclick="resetUpload()">TRY AGAIN</button>
+                    <button class="btn-secondary" onclick="closeUploadModal()">REMOVE</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+    <script src="/static/library.js"></script>
+</body>
+</html>

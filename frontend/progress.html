@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AdaptEd - Progress</title>
+    <meta name="description" content="Intelligent adaptive learning platform progress analytics.">
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Agent Status Strip -->
+    <div class="agent-strip">
+        <div class="agent-strip-inner">
+            <span class="agent-status active"><span class="indicator">●</span> ORCHESTRATOR ACTIVE</span>
+            <span class="agent-status"><span class="indicator">✓</span> QUESTION GEN READY</span>
+            <span class="agent-status"><span class="indicator">✓</span> SOCRATIC COACH READY</span>
+            <span class="agent-status"><span class="indicator">•</span> CONTENT INGEST IDLE</span>
+        </div>
+    </div>
+
+    <!-- Global Navigation -->
+    <nav class="global-nav">
+        <div class="nav-left">
+            <div class="logo">AdaptEd</div>
+            <div class="nav-links">
+                <a href="/">Dashboard</a>
+                <a href="/quiz">Practice</a>
+                <a href="/progress" class="active">Progress</a>
+                <a href="/library">Library</a>
+                <a href="/static/questions.html">Questions</a>
+            </div>
+        </div>
+        <div class="nav-right">
+            <div class="subject-selector">DATABASE SYSTEMS</div>
+            <div class="user-avatar" id="nav-avatar">R</div>
+        </div>
+    </nav>
+
+    <div class="app-container progress-container" id="progress-content">
+        <!-- Loading State Skeleton -->
+        <div id="progress-loading">
+            <div class="skeleton-block" style="height: 100px; margin-bottom: 24px;"></div>
+            <div class="skeleton-block" style="height: 200px; margin-bottom: 24px;"></div>
+            <div class="skeleton-block" style="height: 300px;"></div>
+        </div>
+        
+        <!-- Error State -->
+        <div id="progress-error" class="hidden final-cta">
+            <h2 class="cta-title">PROGRESS DATA UNAVAILABLE</h2>
+            <p class="cta-desc">We couldn't retrieve your latest learning analytics.</p>
+            <div class="panel-actions" style="justify-content: center; margin-top: 16px;">
+                <button class="btn-primary" onclick="window.location.reload()">TRY AGAIN &rarr;</button>
+                <button class="btn-secondary" onclick="window.location.href='/'">BACK TO DASHBOARD</button>
+            </div>
+        </div>
+
+        <div id="progress-main" class="hidden">
+            <!-- Header -->
+            <header class="progress-header">
+                <div>
+                    <h1 class="page-title">PROGRESS</h1>
+                    <p class="page-subtitle">Your learning journey, measured by AdaptEd.</p>
+                </div>
+                <div class="filters">
+                    <div class="filter-item">
+                        <span class="filter-label">SUBJECT</span>
+                        <select class="filter-select"><option>Database Systems</option></select>
+                    </div>
+                    <div class="filter-item">
+                        <span class="filter-label">TIME RANGE</span>
+                        <select class="filter-select"><option>Last 7 days</option></select>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Hero Analytics -->
+            <section class="hero-analytics">
+                <div class="hero-mastery-card">
+                    <div class="eyebrow">YOUR LEARNING PROGRESS</div>
+                    <div class="mastery-large" id="hero-mastery">--%</div>
+                    <div class="mastery-trend-label" id="hero-trend">MASTERY</div>
+                    <p class="hero-desc">Your overall mastery across the topics AdaptEd has evaluated.</p>
+                </div>
+                <div class="hero-chart-card">
+                    <div class="eyebrow">MASTERY TREND</div>
+                    <div class="mastery-trend-viz" id="mastery-trend-viz">
+                        <!-- Filled by JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Key Metrics -->
+            <section class="stats-row" id="key-metrics">
+                <div class="stat-block">
+                    <div class="stat-label">OVERALL MASTERY</div>
+                    <div class="stat-value highlight-volt" id="metric-mastery">--%</div>
+                    <div class="stat-sub" id="metric-mastery-trend"></div>
+                </div>
+                <div class="stat-block">
+                    <div class="stat-label">ACCURACY</div>
+                    <div class="stat-value" id="metric-accuracy">--%</div>
+                    <div class="stat-sub" id="metric-accuracy-trend"></div>
+                </div>
+                <div class="stat-block">
+                    <div class="stat-label">QUESTIONS ANSWERED</div>
+                    <div class="stat-value" id="metric-questions">--</div>
+                    <div class="stat-sub" id="metric-questions-trend"></div>
+                </div>
+                <div class="stat-block">
+                    <div class="stat-label">PRACTICE TIME</div>
+                    <div class="stat-value" id="metric-time">--</div>
+                    <div class="stat-sub" id="metric-time-trend"></div>
+                </div>
+            </section>
+
+            <!-- Mastery By Topic -->
+            <section class="mastery-by-topic">
+                <div class="section-header">
+                    <h3 class="section-title">MASTERY BY TOPIC</h3>
+                    <p class="section-desc">See how your understanding is developing across individual concepts.</p>
+                </div>
+                <div class="topic-list" id="topic-list">
+                    <!-- Populated by JS -->
+                </div>
+            </section>
+
+            <!-- Split Sections: Strongest / Needs Attention -->
+            <div class="split-sections">
+                <section class="strongest-areas">
+                    <div class="section-header">
+                        <h3 class="section-title">YOUR STRONGEST AREAS</h3>
+                    </div>
+                    <div class="editorial-list" id="strongest-list">
+                        <!-- Populated by JS -->
+                    </div>
+                </section>
+                <section class="needs-attention">
+                    <div class="section-header">
+                        <h3 class="section-title">NEEDS ATTENTION</h3>
+                    </div>
+                    <div class="editorial-list" id="attention-list">
+                        <!-- Populated by JS -->
+                    </div>
+                </section>
+            </div>
+
+            <!-- Recent Performance Trend -->
+            <section class="recent-performance-chart">
+                <div class="section-header perf-header">
+                    <h3 class="section-title">RECENT PERFORMANCE</h3>
+                    <div class="perf-controls">
+                        <button class="perf-btn active" data-metric="accuracy">ACCURACY</button>
+                        <button class="perf-btn" data-metric="mastery">MASTERY</button>
+                    </div>
+                </div>
+                <div class="perf-viz-container" id="perf-viz-container">
+                    <!-- JS chart -->
+                </div>
+            </section>
+
+            <!-- Learning Activity (Github Style) -->
+            <section class="learning-activity">
+                <div class="section-header">
+                    <h3 class="section-title">LEARNING ACTIVITY</h3>
+                    <p class="section-desc">Questions answered per day</p>
+                </div>
+                <div class="activity-grid" id="activity-grid">
+                    <!-- JS generated cells -->
+                </div>
+                <div class="activity-labels">
+                    <span>MON</span><span>TUE</span><span>WED</span><span>THU</span><span>FRI</span><span>SAT</span><span>SUN</span>
+                </div>
+            </section>
+
+            <!-- Adaptive Insight -->
+            <section class="adaptive-insight">
+                <div class="section-header">
+                    <h3 class="section-title">HOW ADAPTED IS ADAPTING YOUR PATH</h3>
+                </div>
+                <div class="insight-grid" id="progress-insights">
+                    <!-- JS generated -->
+                </div>
+            </section>
+
+            <!-- Learning Path -->
+            <section class="learning-path">
+                <div class="section-header">
+                    <h3 class="section-title">YOUR ADAPTIVE LEARNING PATH</h3>
+                </div>
+                <div class="path-stages" id="path-stages">
+                    <!-- JS generated -->
+                </div>
+            </section>
+            
+            <!-- Mastered Topics -->
+            <section class="mastered-topics">
+                <div class="section-header">
+                    <h3 class="section-title">RECENTLY MASTERED</h3>
+                </div>
+                <div class="mastered-list" id="mastered-list">
+                    <!-- JS generated -->
+                </div>
+            </section>
+
+            <!-- Recent Sessions -->
+            <section class="recent-sessions">
+                <div class="section-header">
+                    <h3 class="section-title">RECENT SESSIONS</h3>
+                </div>
+                <div class="session-list" id="session-list">
+                    <div class="session-header-row">
+                        <div class="s-col">DATE</div>
+                        <div class="s-col">SUBJECT</div>
+                        <div class="s-col">QUESTIONS</div>
+                        <div class="s-col">ACCURACY</div>
+                        <div class="s-col">ACTION</div>
+                    </div>
+                    <div id="session-rows">
+                        <!-- JS generated -->
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+    <script src="/static/progress.js"></script>
+</body>
+</html>

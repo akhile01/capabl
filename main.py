@@ -87,6 +87,14 @@ def serve_index():
 def serve_quiz():
     return FileResponse(os.path.join(frontend_path, "quiz.html"))
 
+@app.get("/progress")
+def serve_progress():
+    return FileResponse(os.path.join(frontend_path, "progress.html"))
+
+@app.get("/library")
+def serve_library():
+    return FileResponse(os.path.join(frontend_path, "library.html"))
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
