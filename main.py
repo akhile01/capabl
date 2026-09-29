@@ -208,6 +208,10 @@ app.mount("/static", StaticFiles(directory=frontend_path), name="static")
 
 @app.get("/")
 def serve_index():
+    return FileResponse(os.path.join(frontend_path, "landing.html"))
+
+@app.get("/dashboard")
+def serve_dashboard():
     return FileResponse(os.path.join(frontend_path, "index.html"))
 
 @app.get("/welcome")
@@ -218,13 +222,9 @@ def serve_welcome():
 def serve_quiz():
     return FileResponse(os.path.join(frontend_path, "quiz.html"))
 
-<<<<<<< HEAD
-=======
 @app.get("/quiz/summary")
 def serve_summary():
     return FileResponse(os.path.join(frontend_path, "summary.html"))
-
->>>>>>> 0800c7dd2c8c5852e1d97ed7ed3ce40836820e44
 @app.get("/progress")
 def serve_progress():
     return FileResponse(os.path.join(frontend_path, "progress.html"))
@@ -233,13 +233,9 @@ def serve_progress():
 def serve_library():
     return FileResponse(os.path.join(frontend_path, "library.html"))
 
-<<<<<<< HEAD
-=======
 @app.get("/questions")
 def serve_questions():
     return FileResponse(os.path.join(frontend_path, "questions.html"))
-
->>>>>>> 0800c7dd2c8c5852e1d97ed7ed3ce40836820e44
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

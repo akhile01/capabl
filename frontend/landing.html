@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AdaptEd — Your Learning. Adapted To You.</title>
+    <meta name="description" content="An intelligent learning system that adapts to your performance.">
+    <link rel="stylesheet" href="/static/tokens.css">
+    <link rel="stylesheet" href="/static/components.css">
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --black: #0C0C0C;
+            --black-soft: #17170F;
+            --white: #F4F4EC;
+            --white-soft: #EAEADC;
+            --muted: #6B6B60;
+            --border: #2A2A22;
+            --volt: #3654FF;
+            --volt-dark: #2540D6;
+            --volt-tint: #E4E8FF;
+        }
+
+        body {
+            background-color: var(--black);
+            color: var(--white);
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+        }
+
+        /* Nav */
+        .landing-nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 24px 48px;
+            box-sizing: border-box;
+            z-index: 100;
+            mix-blend-mode: difference;
+        }
+
+        .landing-logo {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: var(--white);
+            text-decoration: none;
+        }
+
+        .landing-nav-links {
+            display: flex;
+            gap: 32px;
+            align-items: center;
+        }
+
+        .landing-nav-links a {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--white);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .landing-nav-links a:hover {
+            color: var(--volt);
+        }
+
+        .cta-nav {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--volt) !important;
+        }
+
+        .cta-nav span.arrow {
+            transition: transform 0.3s ease;
+        }
+
+        .cta-nav:hover span.arrow {
+            transform: translateX(4px);
+        }
+
+        /* Hero */
+        .hero {
+            position: relative;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            overflow: hidden;
+        }
+
+        .hero-bg-glow {
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(54, 84, 255, 0.15) 0%, rgba(12, 12, 12, 0) 70%);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0.5;
+            transition: opacity 0.5s ease;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 10;
+            max-width: 800px;
+            padding: 0 24px;
+        }
+
+        .hero-eyebrow {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            color: var(--muted);
+            margin-bottom: 24px;
+            letter-spacing: 0.05em;
+        }
+
+        .hero h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: clamp(48px, 6vw, 96px);
+            font-weight: 700;
+            line-height: 1.1;
+            margin: 0 0 24px 0;
+            letter-spacing: -0.03em;
+        }
+
+        .hero h1 span {
+            color: var(--muted);
+        }
+
+        .hero-subtitle {
+            font-size: 18px;
+            color: var(--muted);
+            max-width: 500px;
+            margin: 0 auto 48px auto;
+            line-height: 1.6;
+        }
+
+        .hero-cta {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--white);
+            color: var(--black);
+            font-family: 'Inter', sans-serif;
+            font-size: 16px;
+            font-weight: 600;
+            padding: 16px 32px;
+            border-radius: 999px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border: 1px solid transparent;
+        }
+
+        .hero-cta:hover {
+            background: var(--black);
+            color: var(--volt);
+            border-color: var(--volt);
+            box-shadow: 0 0 20px rgba(54, 84, 255, 0.2);
+            transform: scale(1.02);
+        }
+
+        .hero-cta .arrow {
+            transition: transform 0.3s ease;
+        }
+
+        .hero-cta:hover .arrow {
+            transform: translateX(4px);
+        }
+
+        /* Abstract Visualization (Canvas) */
+        #hero-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* Transition overlay */
+        .transition-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--volt);
+            z-index: 9999;
+            transform: scaleY(0);
+            transform-origin: bottom;
+            transition: transform 0.6s cubic-bezier(0.76, 0, 0.24, 1);
+            pointer-events: none;
+        }
+        
+        .transition-active .transition-overlay {
+            transform: scaleY(1);
+            transform-origin: bottom;
+        }
+
+        /* Sections */
+        .section {
+            padding: 80px 48px;
+            max-width: 1200px;
+            margin: 0 auto;
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        .section-header {
+            margin-bottom: 40px;
+        }
+        
+        .section-eyebrow {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            color: var(--volt);
+            margin-bottom: 16px;
+            display: block;
+        }
+
+        .section-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: clamp(32px, 4vw, 56px);
+            font-weight: 700;
+            line-height: 1.1;
+            margin: 0;
+            letter-spacing: -0.02em;
+        }
+
+        /* The Problem */
+        .problem-container {
+            display: flex;
+            gap: 48px;
+            align-items: stretch;
+            flex-wrap: wrap;
+        }
+
+        .flow-col {
+            flex: 1;
+            min-width: 300px;
+            background: var(--black-soft);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 48px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            position: relative;
+        }
+
+        .flow-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            color: var(--muted);
+        }
+
+        .flow-node {
+            padding: 16px 24px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            text-align: center;
+            position: relative;
+            transition: all 0.5s ease;
+        }
+
+        .flow-arrow {
+            text-align: center;
+            color: var(--muted);
+            font-size: 20px;
+        }
+
+        .flow-col.active .flow-title {
+            color: var(--white);
+        }
+
+        .flow-col.active .flow-node {
+            border-color: var(--volt);
+            color: var(--volt);
+            background: rgba(54, 84, 255, 0.05);
+            transform: translateY(0);
+            opacity: 0.5;
+        }
+        
+        .flow-col.active .flow-node.final {
+            background: var(--volt);
+            color: var(--white);
+            opacity: 1;
+            box-shadow: 0 0 30px rgba(54, 84, 255, 0.3);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(54, 84, 255, 0.4); }
+            70% { box-shadow: 0 0 0 15px rgba(54, 84, 255, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(54, 84, 255, 0); }
+        }
+
+        /* Adaptive Engine */
+        .engine-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            align-items: center;
+        }
+
+        .engine-visual {
+            position: relative;
+            height: 500px;
+            background: radial-gradient(circle, rgba(23, 23, 15, 1) 0%, rgba(12, 12, 12, 0) 70%);
+        }
+        
+        .engine-node {
+            position: absolute;
+            background: var(--black);
+            border: 1px solid var(--border);
+            color: var(--muted);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            padding: 12px 24px;
+            border-radius: 999px;
+            cursor: default;
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+
+        .engine-node:hover {
+            border-color: var(--volt);
+            color: var(--white);
+            background: var(--volt-dark);
+            box-shadow: 0 0 20px rgba(54, 84, 255, 0.2);
+            z-index: 20;
+        }
+
+        .engine-center {
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--white);
+            border: 2px solid var(--volt);
+            padding: 24px 48px;
+            box-shadow: 0 0 40px rgba(54, 84, 255, 0.1);
+        }
+
+        .engine-content {
+            padding: 32px;
+            background: var(--black-soft);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            min-height: 200px;
+        }
+
+        .engine-content h3 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 24px;
+            color: var(--volt);
+            margin: 0 0 16px 0;
+        }
+
+        .engine-content p {
+            color: var(--muted);
+            line-height: 1.6;
+            margin: 0;
+            font-size: 16px;
+        }
+
+        /* Product Preview */
+        .preview-container {
+            display: flex;
+            gap: 40px;
+            margin-top: 40px;
+        }
+
+        .preview-nav {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            width: 250px;
+            flex-shrink: 0;
+        }
+
+        .preview-item {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--muted);
+            padding: 20px 24px;
+            text-align: left;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .preview-item:hover {
+            border-color: var(--muted);
+            color: var(--white);
+        }
+
+        .preview-item.active {
+            background: var(--black-soft);
+            border-color: var(--volt);
+            color: var(--volt);
+        }
+
+        .preview-display {
+            flex: 1;
+            background: var(--black-soft);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+            min-height: 400px;
+            display: flex;
+        }
+        
+        .preview-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0;
+            position: absolute;
+            top: 0;
+            left: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        .preview-image.active {
+            opacity: 1;
+            z-index: 10;
+        }
+
+        /* Fake UI for preview */
+        .ui-mockup {
+            padding: 32px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            opacity: 0;
+            position: absolute;
+            transition: opacity 0.4s ease;
+            pointer-events: none;
+        }
+
+        .ui-mockup.active {
+            opacity: 1;
+            z-index: 10;
+        }
+
+        .mock-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 16px;
+        }
+
+        .mock-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .mock-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .mock-card {
+            background: var(--black);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 24px;
+        }
+
+        .mock-card-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: var(--muted);
+            margin-bottom: 16px;
+        }
+
+        .mock-card-val {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 32px;
+            color: var(--volt);
+        }
+
+        /* Final CTA */
+        .final-section {
+            text-align: center;
+            padding: 100px 24px;
+            background: var(--black);
+            border-top: 1px solid var(--border);
+        }
+
+        .final-section h2 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: clamp(32px, 5vw, 64px);
+            font-weight: 700;
+            margin: 0 0 24px 0;
+            line-height: 1.1;
+            letter-spacing: -0.02em;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .landing-nav {
+                padding: 20px 24px;
+            }
+            .landing-nav-links {
+                display: none;
+            }
+            .problem-container {
+                flex-direction: column;
+            }
+            .engine-container {
+                grid-template-columns: 1fr;
+            }
+            .engine-visual {
+                height: 300px;
+            }
+            .preview-container {
+                flex-direction: column;
+            }
+            .preview-nav {
+                width: 100%;
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+            .preview-item {
+                flex: 1 1 40%;
+                text-align: center;
+            }
+        }
+        
+        .fade-in-up {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.8s ease, transform 0.8s ease;
+        }
+        
+        .fade-in-up.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="transition-overlay"></div>
+
+    <nav class="landing-nav">
+        <a href="/" class="landing-logo">ADAPTED</a>
+        <div class="landing-nav-links">
+            <a href="#problem">HOW IT WORKS</a>
+            <a href="#engine">SYSTEM</a>
+            <a href="#" class="cta-nav" onclick="enterDashboard(event)">
+                ENTER ADAPTED <span class="arrow">&rarr;</span>
+            </a>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <div class="hero-bg-glow"></div>
+        <canvas id="hero-canvas"></canvas>
+        <div class="hero-content">
+            <div class="hero-eyebrow">ADAPTED</div>
+            <h1 class="fade-in-up">YOUR LEARNING.<br><span>ADAPTED TO YOU.</span></h1>
+            <p class="hero-subtitle fade-in-up" style="transition-delay: 0.1s;">An adaptive learning system that changes what you learn, how you practice, and what comes next.</p>
+            <div class="fade-in-up" style="transition-delay: 0.2s;">
+                <a href="#" class="hero-cta" onclick="enterDashboard(event)">
+                    ENTER ADAPTED <span class="arrow">&rarr;</span>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <section id="problem" class="section">
+        <div class="section-header fade-in-up">
+            <span class="section-eyebrow">THE PROBLEM</span>
+            <h2 class="section-title">STATIC LEARNING ≠ ADAPTIVE LEARNING</h2>
+        </div>
+
+        <div class="problem-container">
+            <div class="flow-col fade-in-up">
+                <div class="flow-title">STATIC LEARNING</div>
+                <div class="flow-node">Question</div>
+                <div class="flow-arrow">&darr;</div>
+                <div class="flow-node">Answer</div>
+                <div class="flow-arrow">&darr;</div>
+                <div class="flow-node">Next Question</div>
+                <div class="flow-arrow">&darr;</div>
+                <div class="flow-node">Same Path</div>
+            </div>
+            <div class="flow-col active fade-in-up" style="transition-delay: 0.2s;" id="adaptive-flow">
+                <div class="flow-title">ADAPTED</div>
+                <div class="flow-node" style="opacity: 0.1; transform: translateY(10px);">Performance</div>
+                <div class="flow-arrow" style="opacity: 0.1;">&darr;</div>
+                <div class="flow-node" style="opacity: 0.1; transform: translateY(10px);">Mastery Update</div>
+                <div class="flow-arrow" style="opacity: 0.1;">&darr;</div>
+                <div class="flow-node" style="opacity: 0.1; transform: translateY(10px);">Adaptive Decision</div>
+                <div class="flow-arrow" style="opacity: 0.1;">&darr;</div>
+                <div class="flow-node final" style="opacity: 0.1; transform: translateY(10px);">NEXT BEST ACTION</div>
+            </div>
+        </div>
+    </section>
+
+    <section id="engine" class="section">
+        <div class="section-header fade-in-up">
+            <span class="section-eyebrow">THE ENGINE</span>
+            <h2 class="section-title">THE SYSTEM LEARNS WITH YOU.</h2>
+        </div>
+
+        <div class="engine-container">
+            <div class="engine-visual fade-in-up">
+                <div class="engine-node engine-center">ADAPTED ENGINE</div>
+                <!-- Positioned around center via JS -->
+                <div class="engine-node" data-target="performance" style="top: 20%; left: 20%;">PERFORMANCE</div>
+                <div class="engine-node" data-target="mastery" style="top: 80%; left: 30%;">MASTERY</div>
+                <div class="engine-node" data-target="content" style="top: 50%; left: 80%;">CONTENT</div>
+                <div class="engine-node" data-target="questions" style="top: 20%; left: 80%;">QUESTIONS</div>
+                <div class="engine-node" data-target="progress" style="top: 80%; left: 70%;">PROGRESS</div>
+            </div>
+            <div class="engine-content fade-in-up" id="engine-desc" style="transition-delay: 0.2s;">
+                <h3>HOVER A NODE</h3>
+                <p>Explore how the components of the AdaptEd system interact continuously to optimize your learning path.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="loop" class="section">
+        <div class="section-header fade-in-up">
+            <span class="section-eyebrow">THE LEARNING LOOP</span>
+            <h2 class="section-title">LEARN. MEASURE. ADAPT. REPEAT.</h2>
+        </div>
+        
+        <!-- We use the same layout style but abstractly represent the continuous loop -->
+        <div style="background: var(--black-soft); border: 1px solid var(--border); border-radius: 24px; padding: 40px; text-align: center; position: relative; overflow: hidden;" class="fade-in-up">
+            <div style="display: flex; justify-content: space-between; align-items: center; max-width: 800px; margin: 0 auto; flex-wrap: wrap; gap: 24px;">
+                <div style="color: var(--volt); font-family: 'JetBrains Mono'; font-size: 16px;">LIBRARY</div>
+                <div style="color: var(--muted);">&rarr;</div>
+                <div style="color: var(--volt); font-family: 'JetBrains Mono'; font-size: 16px;">QUESTIONS</div>
+                <div style="color: var(--muted);">&rarr;</div>
+                <div style="color: var(--volt); font-family: 'JetBrains Mono'; font-size: 16px;">PRACTICE</div>
+                <div style="color: var(--muted);">&rarr;</div>
+                <div style="color: var(--white); font-weight: bold; font-family: 'JetBrains Mono'; font-size: 16px;">ORCHESTRATOR</div>
+            </div>
+            <p style="color: var(--muted); margin-top: 32px; font-size: 18px; max-width: 500px; margin-left: auto; margin-right: auto;">
+                Every interaction creates data. AdaptEd’s orchestrator uses this data to make intelligent decisions about your next step.
+            </p>
+        </div>
+    </section>
+
+    <section class="section" id="preview">
+        <div class="section-header fade-in-up">
+            <span class="section-eyebrow">THE ECOSYSTEM</span>
+            <h2 class="section-title">A COMPLETE LEARNING ENVIRONMENT.</h2>
+        </div>
+
+        <div class="preview-container fade-in-up">
+            <div class="preview-nav">
+                <button class="preview-item active" data-preview="dashboard">DASHBOARD</button>
+                <button class="preview-item" data-preview="practice">PRACTICE</button>
+                <button class="preview-item" data-preview="progress">PROGRESS</button>
+                <button class="preview-item" data-preview="library">LIBRARY</button>
+            </div>
+            <div class="preview-display">
+                <!-- Mockups simulating the real app -->
+                <div class="ui-mockup active" id="mock-dashboard">
+                    <div class="mock-header">
+                        <div class="mock-title">Dashboard</div>
+                    </div>
+                    <div class="mock-grid">
+                        <div class="mock-card">
+                            <div class="mock-card-title">TODAY'S RECOMMENDATION</div>
+                            <div style="color: var(--white); font-family: 'Space Grotesk'; font-size: 24px; margin-bottom: 8px;">Database Normalization</div>
+                            <div style="color: var(--muted); font-size: 14px;">Mastery: 42%</div>
+                        </div>
+                        <div class="mock-card">
+                            <div class="mock-card-title">RECENT ACCURACY</div>
+                            <div class="mock-card-val">76%</div>
+                        </div>
+                    </div>
+                    <div style="background: var(--black); border: 1px solid var(--border); border-radius: 8px; padding: 24px; margin-top: auto;">
+                        <div style="color: var(--muted); font-family: 'JetBrains Mono'; font-size: 12px; margin-bottom: 12px;">ORCHESTRATOR INSIGHT</div>
+                        <div style="color: var(--white); font-size: 14px; line-height: 1.5;">Spaced repetition schedules have been updated based on your last session.</div>
+                    </div>
+                </div>
+                
+                <div class="ui-mockup" id="mock-practice">
+                    <div class="mock-header">
+                        <div class="mock-title">Practice Session</div>
+                    </div>
+                    <div style="margin-bottom: 24px;">
+                        <span style="background: rgba(228, 232, 255, 0.1); color: var(--volt-tint); padding: 4px 8px; border-radius: 4px; font-size: 12px; font-family: 'JetBrains Mono';">Difficulty: Adaptive</span>
+                    </div>
+                    <div style="font-size: 18px; color: var(--white); line-height: 1.6;">
+                        Explain the primary difference between Boyce-Codd Normal Form (BCNF) and 3rd Normal Form (3NF).
+                    </div>
+                    <div style="margin-top: 24px; display: flex; flex-direction: column; gap: 12px;">
+                        <div style="border: 1px solid var(--border); padding: 16px; border-radius: 8px; color: var(--muted);">Type your answer...</div>
+                        <div style="display: flex; justify-content: flex-end;">
+                            <div style="background: var(--white); color: var(--black); padding: 10px 20px; border-radius: 999px; font-weight: 600; font-size: 14px;">Submit</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ui-mockup" id="mock-progress">
+                    <div class="mock-header">
+                        <div class="mock-title">Mastery Progress</div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 16px;">
+                        <div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                <span style="font-family: 'JetBrains Mono'; color: var(--muted);">Entity-Relationship Models</span>
+                                <span style="color: var(--volt);">85%</span>
+                            </div>
+                            <div style="height: 4px; background: var(--border); border-radius: 2px;"><div style="height: 100%; width: 85%; background: var(--volt); border-radius: 2px;"></div></div>
+                        </div>
+                        <div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                <span style="font-family: 'JetBrains Mono'; color: var(--muted);">Relational Algebra</span>
+                                <span style="color: var(--volt);">62%</span>
+                            </div>
+                            <div style="height: 4px; background: var(--border); border-radius: 2px;"><div style="height: 100%; width: 62%; background: var(--volt); border-radius: 2px;"></div></div>
+                        </div>
+                        <div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                <span style="font-family: 'JetBrains Mono'; color: var(--muted);">SQL Optimization</span>
+                                <span style="color: var(--white);">30%</span>
+                            </div>
+                            <div style="height: 4px; background: var(--border); border-radius: 2px;"><div style="height: 100%; width: 30%; background: var(--muted); border-radius: 2px;"></div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ui-mockup" id="mock-library">
+                    <div class="mock-header">
+                        <div class="mock-title">Content Library</div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <div style="border: 1px solid var(--border); padding: 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div style="color: var(--white); font-weight: 500; margin-bottom: 4px;">Database Systems Unit 4</div>
+                                <div style="color: var(--muted); font-size: 12px; font-family: 'JetBrains Mono';">PDF • Processed</div>
+                            </div>
+                            <div style="color: var(--volt); font-size: 12px;">View</div>
+                        </div>
+                        <div style="border: 1px solid var(--border); padding: 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div style="color: var(--white); font-weight: 500; margin-bottom: 4px;">Advanced SQL Queries</div>
+                                <div style="color: var(--muted); font-size: 12px; font-family: 'JetBrains Mono';">PDF • Processed</div>
+                            </div>
+                            <div style="color: var(--volt); font-size: 12px;">View</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <section class="final-section">
+        <h2 class="fade-in-up">YOUR NEXT LEARNING STEP<br>SHOULD NOT BE RANDOM.</h2>
+        <div class="fade-in-up" style="transition-delay: 0.1s; margin-bottom: 24px; color: var(--muted); font-size: 18px;">
+            Let AdaptEd choose what comes next.
+        </div>
+        <div class="fade-in-up" style="transition-delay: 0.2s;">
+            <a href="#" class="hero-cta" onclick="enterDashboard(event)" style="background: var(--volt); color: var(--white);">
+                ENTER ADAPTED <span class="arrow">&rarr;</span>
+            </a>
+        </div>
+    </section>
+
+    <script>
+        // Intersection Observer for scroll animations
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    
+                    if (entry.target.id === 'adaptive-flow') {
+                        // Staggered reveal of adaptive nodes
+                        const nodes = entry.target.querySelectorAll('.flow-node, .flow-arrow');
+                        nodes.forEach((n, i) => {
+                            setTimeout(() => {
+                                n.style.opacity = '1';
+                                n.style.transform = 'translateY(0)';
+                            }, 300 * i);
+                        });
+                    }
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('.fade-in-up').forEach(el => observer.observe(el));
+
+        // Engine descriptions mapping
+        const engineData = {
+            performance: { title: "PERFORMANCE", desc: "Your recent answers become signals for what happens next. Every interaction is measured." },
+            mastery: { title: "MASTERY", desc: "AdaptEd continuously tracks your understanding across all topics, building a comprehensive knowledge profile." },
+            content: { title: "CONTENT", desc: "Your uploaded learning material becomes part of the structured knowledge context for grounded generation." },
+            questions: { title: "QUESTIONS", desc: "Questions are dynamically selected and generated according to your current learning state." },
+            progress: { title: "PROGRESS", desc: "Your performance updates your learning profile, adjusting spaced repetition schedules automatically." }
+        };
+
+        const engineNodes = document.querySelectorAll('.engine-node:not(.engine-center)');
+        const engineDesc = document.getElementById('engine-desc');
+
+        engineNodes.forEach(node => {
+            node.addEventListener('mouseenter', () => {
+                const target = node.getAttribute('data-target');
+                if (engineData[target]) {
+                    engineDesc.innerHTML = `<h3>${engineData[target].title}</h3><p>${engineData[target].desc}</p>`;
+                    engineDesc.style.borderColor = 'var(--volt)';
+                }
+            });
+            node.addEventListener('mouseleave', () => {
+                engineDesc.style.borderColor = 'var(--border)';
+            });
+        });
+
+        // Product Preview tabs
+        const previewNavs = document.querySelectorAll('.preview-item');
+        const mockups = document.querySelectorAll('.ui-mockup');
+
+        previewNavs.forEach(nav => {
+            nav.addEventListener('click', () => {
+                const target = nav.getAttribute('data-preview');
+                
+                previewNavs.forEach(n => n.classList.remove('active'));
+                nav.classList.add('active');
+
+                mockups.forEach(m => m.classList.remove('active'));
+                document.getElementById('mock-' + target).classList.add('active');
+            });
+        });
+
+        // Premium Transition to Dashboard
+        function enterDashboard(e) {
+            e.preventDefault();
+            document.body.classList.add('transition-active');
+            
+            // Wait for transition to finish before redirect
+            setTimeout(() => {
+                window.location.href = '/dashboard';
+            }, 600);
+        }
+
+        // Hero Abstract Visualization Canvas
+        const canvas = document.getElementById('hero-canvas');
+        const ctx = canvas.getContext('2d');
+        
+        let width, height;
+        let particles = [];
+        const mouse = { x: null, y: null };
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.size = Math.random() * 2 + 1;
+                this.baseX = this.x;
+                this.baseY = this.y;
+                this.density = (Math.random() * 30) + 1;
+                this.color = 'rgba(107, 107, 96, 0.3)'; // var(--muted) with opacity
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.closePath();
+                ctx.fill();
+            }
+
+            update() {
+                let dx = mouse.x - this.x;
+                let dy = mouse.y - this.y;
+                let distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < 150) {
+                    this.color = 'rgba(54, 84, 255, 0.8)'; // var(--volt)
+                    ctx.beginPath();
+                    ctx.strokeStyle = `rgba(54, 84, 255, ${1 - distance/150})`;
+                    ctx.moveTo(this.x, this.y);
+                    ctx.lineTo(mouse.x, mouse.y);
+                    ctx.stroke();
+                } else {
+                    this.color = 'rgba(107, 107, 96, 0.3)';
+                }
+                
+                // Return to base
+                if (this.x !== this.baseX) {
+                    let dx = this.x - this.baseX;
+                    this.x -= dx / 20;
+                }
+                if (this.y !== this.baseY) {
+                    let dy = this.y - this.baseY;
+                    this.y -= dy / 20;
+                }
+            }
+        }
+
+        function initParticles() {
+            particles = [];
+            let count = window.innerWidth < 768 ? 40 : 100;
+            for (let i = 0; i < count; i++) {
+                particles.push(new Particle());
+            }
+        }
+
+        initParticles();
+
+        function animate() {
+            ctx.clearRect(0, 0, width, height);
+            for (let i = 0; i < particles.length; i++) {
+                particles[i].draw();
+                particles[i].update();
+            }
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+
+        window.addEventListener('mousemove', (event) => {
+            mouse.x = event.x;
+            mouse.y = event.y;
+            
+            // Subtle background glow follow
+            const glow = document.querySelector('.hero-bg-glow');
+            const xPercent = (event.x / window.innerWidth - 0.5) * 20;
+            const yPercent = (event.y / window.innerHeight - 0.5) * 20;
+            glow.style.transform = `translate(calc(-50% + ${xPercent}px), calc(-50% + ${yPercent}px))`;
+        });
+        
+        window.addEventListener('mouseleave', () => {
+            mouse.x = null;
+            mouse.y = null;
+            document.querySelector('.hero-bg-glow').style.transform = `translate(-50%, -50%)`;
+        });
+
+    </script>
+</body>
+</html>
