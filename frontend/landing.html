@@ -22,6 +22,9 @@
             --volt: #3654FF;
             --volt-dark: #2540D6;
             --volt-tint: #E4E8FF;
+            --bg-transparent: rgba(12, 12, 12, 0);
+            --glow-center: rgba(54, 84, 255, 0.15);
+            --engine-center: rgba(23, 23, 15, 1);
         }
 
         body {
@@ -108,7 +111,7 @@
             position: absolute;
             width: 600px;
             height: 600px;
-            background: radial-gradient(circle, rgba(54, 84, 255, 0.15) 0%, rgba(12, 12, 12, 0) 70%);
+            background: radial-gradient(circle, var(--glow-center) 0%, var(--bg-transparent) 70%);
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
@@ -330,7 +333,7 @@
         .engine-visual {
             position: relative;
             height: 500px;
-            background: radial-gradient(circle, rgba(23, 23, 15, 1) 0%, rgba(12, 12, 12, 0) 70%);
+            background: radial-gradient(circle, var(--engine-center) 0%, var(--bg-transparent) 70%);
         }
         
         .engine-node {
@@ -573,6 +576,8 @@
             transform: translateY(0);
         }
     </style>
+    <link rel="stylesheet" href="/static/theme.css">
+    <script src="/static/theme.js"></script>
 </head>
 <body>
 
@@ -581,6 +586,10 @@
     <nav class="landing-nav">
         <a href="/" class="landing-logo">ADAPTED</a>
         <div class="landing-nav-links">
+            <button class="theme-toggle" aria-label="Toggle Theme">
+                <span class="icon-light">☀️</span>
+                <span class="icon-dark">🌙</span>
+            </button>
             <a href="#problem">HOW IT WORKS</a>
             <a href="#engine">SYSTEM</a>
             <a href="#" class="cta-nav" onclick="enterDashboard(event)">

@@ -6,6 +6,7 @@
     <title>AdaptEd</title>
     <meta name="description" content="Intelligent adaptive learning platform.">
     <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/theme.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -34,6 +35,10 @@
             </div>
         </div>
         <div class="nav-right">
+            <button class="theme-toggle" aria-label="Toggle theme">
+                <span class="icon-light">☀️</span>
+                <span class="icon-dark">🌙</span>
+            </button>
             <div class="subject-selector">DATABASE SYSTEMS</div>
             <div class="user-avatar" id="nav-avatar">R</div>
         </div>
@@ -229,6 +234,7 @@
         </section>
     </div>
 
+    <script src="/static/theme.js"></script>
     <script src="/static/app.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {

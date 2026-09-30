@@ -1,0 +1,48 @@
+/* Light Theme Overrides */
+[data-theme="light"] {
+    --black: #F4F4EC;
+    --black-soft: #FFFFFF;
+    --off-white: #0C0C0C;
+    --off-white-soft: #17170F;
+    --white: #0C0C0C;
+    --white-soft: #17170F;
+    --muted: #6B6B60;
+    --border: #DEDED0;
+    --bg-transparent: rgba(244, 244, 236, 0);
+    --glow-center: rgba(54, 84, 255, 0.08);
+    --engine-center: rgba(255, 255, 255, 1);
+}
+
+/* Theme Toggle Button Styles */
+.theme-toggle {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--off-white);
+    transition: all 0.2s ease;
+    font-size: 14px;
+}
+
+.theme-toggle:hover {
+    background: var(--black-soft);
+    border-color: var(--volt-blue);
+}
+
+[data-theme="light"] .icon-light {
+    display: none;
+}
+[data-theme="light"] .icon-dark {
+    display: inline;
+}
+
+[data-theme="dark"] .icon-light {
+    display: inline;
+}
+[data-theme="dark"] .icon-dark {
+    display: none;
+}
