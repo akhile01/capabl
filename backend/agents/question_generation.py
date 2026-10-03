@@ -4,13 +4,13 @@ import os
 from typing import Any, Dict, List, Optional, Tuple
 from pydantic import BaseModel, Field
 
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.documents import Document
 
 from backend.services.vector_store import search as vs_search
 from backend.model.question import Question, QuestionType, DifficultyLevel
 from backend.prompts.question_generation import GENERATION_PROMPT
 from backend.prompts.question_critique import CRITIQUE_PROMPT
+from backend.services.llm import get_chat_model, invoke_structured
 
 logger = logging.getLogger(__name__)
 
@@ -43,17 +43,35 @@ class QuestionGenerationAgent:
     """Agent responsible for generating validated educational questions."""
 
     def __init__(self):
-        self.llm = self._get_llm(temperature=0.2)
-        self.critique_llm = self._get_llm(temperature=0.0)
+        # Models are created lazily so the server can start (and the UI can
+        # report a clear error) even when no LLM credentials are configured yet.
+        self._llm = None
+        self._critique_llm = None
         self.max_attempts = int(os.getenv("MAX_GENERATION_ATTEMPTS", "3"))
+
+    @property
+    def llm(self):
+        if self._llm is None:
+            self._llm = self._get_llm(temperature=0.2)
+        return self._llm
+
+    @llm.setter
+    def llm(self, value):
+        self._llm = value
+
+    @property
+    def critique_llm(self):
+        if self._critique_llm is None:
+            self._critique_llm = self._get_llm(temperature=0.0)
+        return self._critique_llm
+
+    @critique_llm.setter
+    def critique_llm(self, value):
+        self._critique_llm = value
         
-    def _get_llm(self, temperature: float = 0.2) -> ChatGoogleGenerativeAI:
-        api_key = os.getenv("GEMINI_API_KEY")
-        if not api_key:
-            raise ValueError("GEMINI_API_KEY not found in environment variables.")
-        return ChatGoogleGenerativeAI(
-            model="gemini-3.6-flash", google_api_key=api_key, temperature=temperature
-        )
+    def _get_llm(self, temperature: float = 0.2):
+        # Provider (Nova API / Gemini) and model come from .env; see backend/services/llm.py
+        return get_chat_model(temperature=temperature)
 
     def _retrieve_context(self, topic: str, k: int = 5) -> Tuple[str, List[Document]]:
         docs = vs_search(topic, k=k)
@@ -85,7 +103,6 @@ class QuestionGenerationAgent:
         
     def _critique(self, question: GeneratedMCQ, context: str, difficulty: str, bloom_level: str, prior_questions: List[Dict]) -> CritiqueOutput:
         try:
-            structured_llm = self.critique_llm.with_structured_output(CritiqueOutput)
             prompt_val = CRITIQUE_PROMPT.format(
                 context=context,
                 question_json=question.model_dump_json(),
@@ -93,7 +110,7 @@ class QuestionGenerationAgent:
                 difficulty=difficulty,
                 bloom_level=bloom_level or "Not specified"
             )
-            return structured_llm.invoke(prompt_val)
+            return invoke_structured(self.critique_llm, prompt_val, CritiqueOutput)
         except Exception as e:
             logger.error(f"Critique failed: {e}")
             return CritiqueOutput(
@@ -122,8 +139,6 @@ class QuestionGenerationAgent:
             logger.error("No context available for generation.")
             return None
             
-        structured_llm = self.llm.with_structured_output(GeneratedMCQ)
-        
         for attempt in range(self.max_attempts):
             logger.info(f"Generation attempt {attempt + 1}/{self.max_attempts} for topic: {topic}")
             
@@ -139,7 +154,7 @@ class QuestionGenerationAgent:
             
             try:
                 # 1. LLM Generation
-                generated: GeneratedMCQ = structured_llm.invoke(prompt_val)
+                generated: GeneratedMCQ = invoke_structured(self.llm, prompt_val, GeneratedMCQ)
                 
                 # 2. Deterministic Validation
                 deterministic_issues = self._deterministic_validation(generated)
@@ -192,6 +207,11 @@ class QuestionGenerationAgent:
         context_str, docs = self._retrieve_context(topic, k=max(5, count * 2))
         if not docs:
             return {"status": "error", "message": "No context found"}
+
+        # Resolve the model up front so a configuration problem (missing API key,
+        # unreachable gateway) is reported to the caller instead of being swallowed
+        # by the per-attempt retry loop below.
+        _ = self.llm
             
         valid_questions = []
         prior_questions = prior_questions or []

@@ -2,9 +2,10 @@ import json
 import os
 from typing import TypedDict, Dict, Any
 
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.graph import StateGraph, END
 from dotenv import load_dotenv
+
+from backend.services.llm import get_chat_model
 
 load_dotenv()
 
@@ -34,18 +35,22 @@ class SocraticEvaluationAgent:
     """Agent in charge of evaluating student answers using a Socratic hint-first loop."""
     
     def __init__(self):
-        self.llm = self._get_llm()
+        self._llm = None  # created lazily on first use (see backend/services/llm.py)
         self.workflow = self._build_workflow()
 
-    def _get_llm(self) -> ChatGoogleGenerativeAI:
-        # Respect existing convention: look for GEMINI_API_KEY first, fallback to GOOGLE_API_KEY
-        api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
-        if not api_key:
-            raise ValueError("GEMINI_API_KEY or GOOGLE_API_KEY not found in environment variables.")
-        return ChatGoogleGenerativeAI(
-            model="gemini-3.6-flash", 
-            google_api_key=api_key
-        )
+    @property
+    def llm(self):
+        if self._llm is None:
+            self._llm = self._get_llm()
+        return self._llm
+
+    @llm.setter
+    def llm(self, value):
+        self._llm = value
+
+    def _get_llm(self):
+        # Provider (Nova API / Gemini) and model come from .env; see backend/services/llm.py
+        return get_chat_model(temperature=0.3)
 
     # ==========================================
     # NODE 1: EVALUATE THE ANSWER
