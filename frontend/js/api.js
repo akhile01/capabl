@@ -76,7 +76,8 @@ function switchState(containerId, state) {
   if (!container) return;
   const views = container.querySelectorAll('.view-state');
   views.forEach(v => v.classList.remove('active'));
-  const activeView = container.querySelector(`.view-${state}`);
+  // Views are marked either by class (.view-loaded) or by id (#view-loaded)
+  const activeView = container.querySelector(`.view-${state}`) || container.querySelector(`#view-${state}`);
   if (activeView) activeView.classList.add('active');
 }
 
@@ -97,7 +98,7 @@ function renderNav() {
       </div>
     </div>
     <nav class="nav-bar">
-      <a href="/" class="nav-link ${currentPath === '/' ? 'active' : ''}">Dashboard</a>
+      <a href="/dashboard" class="nav-link ${currentPath === '/dashboard' ? 'active' : ''}">Dashboard</a>
       <a href="/quiz" class="nav-link ${currentPath === '/quiz' ? 'active' : ''}">Practice</a>
       <a href="/progress" class="nav-link ${currentPath === '/progress' ? 'active' : ''}">Progress</a>
       <a href="/library" class="nav-link ${currentPath === '/library' ? 'active' : ''}">Library</a>

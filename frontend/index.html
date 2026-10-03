@@ -31,7 +31,7 @@
                 <a href="/quiz">Practice</a>
                 <a href="/progress">Progress</a>
                 <a href="/library">Library</a>
-                <a href="/static/questions.html">Questions</a>
+                <a href="/questions">Questions</a>
             </div>
         </div>
         <div class="nav-right">
@@ -80,8 +80,8 @@
                     </div>
                     <p class="panel-desc" id="rec-desc">Your orchestrator selected this topic because it is currently weak and due for revision.</p>
                     <div class="panel-actions">
-                        <button class="btn-primary" onclick="window.location.href='/quiz'">START PRACTICE &rarr;</button>
-                        <button class="btn-secondary">VIEW TOPIC</button>
+                        <button class="btn-primary" id="rec-start-btn" onclick="window.location.href='/quiz'">START PRACTICE &rarr;</button>
+                        <button class="btn-secondary" id="rec-view-btn" onclick="window.location.href='/questions'">VIEW TOPIC</button>
                     </div>
                 </div>
             </div>
@@ -135,7 +135,7 @@
                     <!-- Populated by JS -->
                     <div class="editorial-row skeleton">Loading...</div>
                 </div>
-                <a href="#" class="view-link">VIEW FULL PROGRESS &rarr;</a>
+                <a href="/progress" class="view-link">VIEW FULL PROGRESS &rarr;</a>
             </section>
         </div>
 

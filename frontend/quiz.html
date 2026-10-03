@@ -26,11 +26,11 @@
         <div class="nav-left">
             <div class="logo">AdaptEd</div>
             <div class="nav-links">
-                <a href="/">Dashboard</a>
+                <a href="/dashboard">Dashboard</a>
                 <a href="/quiz" class="active">Practice</a>
                 <a href="/progress">Progress</a>
                 <a href="/library">Library</a>
-                <a href="/static/questions.html">Questions</a>
+                <a href="/questions">Questions</a>
             </div>
         </div>
         <div class="nav-right">
@@ -80,8 +80,9 @@
             <div id="state-error" class="quiz-state hidden">
                 <h2 class="error-title">QUESTION COULD NOT BE LOADED</h2>
                 <p class="error-desc">We couldn't prepare your next adaptive question.</p>
+                <p class="error-detail" id="error-detail"></p>
                 <button class="btn-primary" onclick="retryFetch()">TRY AGAIN &rarr;</button>
-                <a class="btn-secondary" href="/">BACK TO DASHBOARD</a>
+                <a class="btn-secondary" href="/dashboard">BACK TO DASHBOARD</a>
             </div>
 
             <!-- State: Ready/Feedback -->

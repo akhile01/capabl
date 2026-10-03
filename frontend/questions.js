@@ -39,9 +39,11 @@ async function fetchQuestions() {
     document.getElementById('qb-list').classList.remove('hidden');
     
     try {
-        const studentId = localStorage.getItem('student_id') || 'unknown';
-        // Note: The /api/questions endpoint is expected to return the list of generated questions and attempts
-        const res = await fetch(`/api/questions/${studentId}`);
+        const studentId = localStorage.getItem('student_id');
+        const params = new URLSearchParams();
+        if (studentId) params.set('student_id', studentId);
+        // /api/questions returns every generated question, flattened, plus this student's attempt status
+        const res = await fetch(`/api/questions?${params.toString()}`);
         
         if (!res.ok) {
             throw new Error('Questions API unavailable');
@@ -54,6 +56,7 @@ async function fetchQuestions() {
             showEmptyState();
         } else {
             populateFilters(questionBank);
+            applyDeepLinkFilters();
             applyFilters();
             renderAnalytics(questionBank);
         }
@@ -61,6 +64,15 @@ async function fetchQuestions() {
         console.error(e);
         showErrorState();
     }
+}
+
+// Pre-select filters passed in the URL (e.g. /questions?topic=Normalization from the dashboard)
+function applyDeepLinkFilters() {
+    const params = new URLSearchParams(window.location.search);
+    const topic = params.get('topic');
+    const subject = params.get('subject');
+    if (topic) document.getElementById('filter-topic').value = topic;
+    if (subject) document.getElementById('filter-subject').value = subject;
 }
 
 function showEmptyState() {
@@ -105,7 +117,7 @@ function renderAnalytics(questions) {
         if (q.status && q.status !== 'unattempted') {
             attempted++;
             if (q.status === 'correct') correct++;
-            if (q.status === 'review' || q.status === 'incorrect') review++;
+            if (q.status === 'incorrect') review++;
         }
     });
     
@@ -247,10 +259,10 @@ function renderQuestionList() {
         const dateStr = q.date ? new Date(q.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }).toUpperCase() : '';
         
         div.innerHTML = `
-            <div class="q-text-col">${q.question_text || ''}</div>
-            <div class="q-subject-col">${q.subject || ''}</div>
-            <div class="q-topic-col">${q.topic || ''}</div>
-            <div class="q-diff-col">${q.difficulty || ''}</div>
+            <div class="q-text-col">${escapeHtml(q.question_text)}</div>
+            <div class="q-subject-col">${escapeHtml(q.subject)}</div>
+            <div class="q-topic-col">${escapeHtml(q.topic)}</div>
+            <div class="q-diff-col">${escapeHtml(q.difficulty)}</div>
             <div class="q-status-col ${statusClass}">${statusText}</div>
             <div class="q-date-col">${dateStr}</div>
             <div class="q-action-col">VIEW →</div>
@@ -277,7 +289,8 @@ function openQuestionDetail(q) {
         q.options.forEach((opt, idx) => {
             const optDiv = document.createElement('div');
             optDiv.className = 'detail-option';
-            optDiv.innerHTML = `<span class="opt-label">${labels[idx] || ''}</span><span class="opt-text">${opt}</span>`;
+            optDiv.innerHTML = `<span class="opt-label">${labels[idx] || ''}</span><span class="opt-text">${escapeHtml(opt)}</span>`;
+            if (q.correct_answer && opt === q.correct_answer && q.status !== 'unattempted') optDiv.classList.add('is-correct');
             optsContainer.appendChild(optDiv);
         });
     }
@@ -298,7 +311,7 @@ function openQuestionDetail(q) {
             resContainer.className = 'qb-detail-result incorrect';
             statusEl.textContent = '! INCORRECT';
         }
-        document.getElementById('detail-your-answer').textContent = q.user_answer || 'Unknown';
+        document.getElementById('detail-your-answer').textContent = q.user_answer || (q.status === 'correct' ? q.correct_answer : 'Not recorded');
     } else {
         resContainer.classList.add('hidden');
         unattemptedContainer.classList.remove('hidden');
@@ -331,6 +344,9 @@ function openQuestionDetail(q) {
         sourceContainer.classList.add('hidden');
     }
     
+    const practiceBtn = document.querySelector('#qb-detail-view .btn-primary.full-width');
+    if (practiceBtn) practiceBtn.onclick = () => window.location.href = `/quiz?topic=${encodeURIComponent(q.topic || '')}`;
+
     // Meta
     document.getElementById('detail-type').textContent = q.question_type ? q.question_type.toUpperCase().replace('_', ' ') : 'MULTIPLE CHOICE';
 }

@@ -1,5 +1,15 @@
-const API_BASE = '/api';
+// NOTE: API_BASE is declared in app.js, which quiz.html loads before this file.
+// Re-declaring it here threw "Identifier 'API_BASE' has already been declared"
+// and prevented this whole script from running (no buttons worked).
 let studentId = localStorage.getItem('student_id') || 'default';
+const SESSION_LENGTH = 10;
+const urlParams = new URLSearchParams(window.location.search);
+const requestedTopic = urlParams.get('topic');
+let sessionComplete = false;
+
+function currentSubject() {
+    return (typeof getSubject === 'function') ? getSubject() : (localStorage.getItem('subject') || 'Unknown');
+}
 
 let state = {
     questionId: null,
@@ -55,20 +65,12 @@ document.addEventListener('keydown', (e) => {
 });
 
 async function initQuiz() {
-    if (!localStorage.getItem('student_id')) {
-        try {
-            const res = await fetch(`${API_BASE}/students`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ name: 'Rajeev' })
-            });
-            const data = await res.json();
-            studentId = data.student_id;
-            localStorage.setItem('student_id', studentId);
-        } catch (e) {
-            console.warn('Failed to auto-create student');
-        }
+    try {
+        studentId = await getOrCreateStudent();
+    } catch (e) {
+        console.warn('Failed to auto-create student', e);
     }
+    sessionStorage.removeItem('quiz_session');
     
     UI.btnSubmit.addEventListener('click', submitAnswer);
     UI.btnNext.addEventListener('click', fetchNextQuestion);
@@ -104,35 +106,43 @@ function stopLoading() {
     UI.stateLoading.classList.add('hidden');
 }
 
-function showError() {
+function showError(message) {
     stopLoading();
     UI.stateActive.classList.add('hidden');
     UI.stateError.classList.remove('hidden');
+    const detail = document.getElementById('error-detail');
+    if (detail) detail.textContent = message || '';
 }
 
 window.retryFetch = fetchNextQuestion;
 
 async function fetchNextQuestion() {
+    if (sessionComplete) {
+        window.location.href = '/quiz/summary';
+        return;
+    }
     startLoading();
     state.selectedOption = null;
     state.attemptCount = 1;
     
     try {
-        const res = await fetch(`${API_BASE}/next_question/${studentId}`);
+        const params = new URLSearchParams({ subject: currentSubject() });
+        if (requestedTopic) params.set('topic', requestedTopic);
+        const res = await fetch(`${API_BASE}/next_question/${studentId}?${params.toString()}`);
         const data = await res.json();
         
-        if (data.status === 'success') {
-            renderQuestion(data.question, data.reason);
+        if (res.ok && data.status === 'success') {
+            renderQuestion(data.question, data.reason, data.mastery);
         } else {
-            showError();
+            showError(data.detail || data.message || 'The server could not provide a question.');
         }
     } catch (e) {
         console.error(e);
-        showError();
+        showError('Could not reach the server. Check that the backend is running.');
     }
 }
 
-function renderQuestion(q, reason) {
+function renderQuestion(q, reason, mastery) {
     stopLoading();
     UI.stateActive.classList.remove('hidden');
     
@@ -152,15 +162,15 @@ function renderQuestion(q, reason) {
     
     // Header info
     document.getElementById('hdr-subject').textContent = q.topic;
-    document.getElementById('hdr-subj-badge').textContent = (q.subject || 'DATABASE SYSTEMS').toUpperCase();
+    document.getElementById('hdr-subj-badge').textContent = (q.subject || currentSubject()).toUpperCase();
     document.getElementById('hdr-diff').textContent = (q.difficulty || 'MEDIUM').toUpperCase();
     const bloom = q.bloom_level || 'APPLY';
     document.getElementById('hdr-bloom').textContent = `BLOOM: ${bloom.toUpperCase()}`;
     
     const qNum = state.questionsAnswered + 1;
-    document.getElementById('hdr-progress-text').textContent = `Q ${qNum.toString().padStart(2, '0')} / 10`;
+    document.getElementById('hdr-progress-text').textContent = `Q ${qNum.toString().padStart(2, '0')} / ${SESSION_LENGTH}`;
     document.getElementById('q-num-label').textContent = `QUESTION ${qNum.toString().padStart(2, '0')}`;
-    document.getElementById('hdr-progress-bar').style.width = `${(qNum / 10) * 100}%`;
+    document.getElementById('hdr-progress-bar').style.width = `${Math.min(100, (qNum / SESSION_LENGTH) * 100)}%`;
     
     document.getElementById('q-diff-label').textContent = (q.difficulty || 'MEDIUM').toUpperCase();
     document.getElementById('q-bloom-label').textContent = `BLOOM: ${bloom.toUpperCase()}`;
@@ -171,7 +181,8 @@ function renderQuestion(q, reason) {
     document.getElementById('ai-reason').textContent = reason || "Selected because it matches your learning path targets.";
     document.getElementById('ai-diff').textContent = (q.difficulty || 'MEDIUM').toUpperCase();
     // Use an approximate mastery if missing
-    document.getElementById('ai-mastery').textContent = "Current"; 
+    document.getElementById('ai-mastery').textContent = (typeof mastery === 'number') ? `${Math.round(mastery * 100)}%` : '--%';
+    document.getElementById('ai-status').textContent = requestedTopic ? 'SELECTED' : ((typeof mastery === 'number' && mastery < 0.6) ? 'WEAK' : 'DUE');
     
     UI.optionsContainer.innerHTML = '';
     const letters = ['A', 'B', 'C', 'D'];
@@ -224,16 +235,20 @@ async function submitAnswer() {
             body: JSON.stringify({
                 question_id: state.questionId,
                 answer: state.selectedOption,
-                attempt_count: state.attemptCount
+                attempt_count: state.attemptCount,
+                subject: currentSubject()
             })
         });
         const data = await res.json();
+        if (!res.ok || data.status === 'error') {
+            throw new Error(data.detail || data.message || 'Evaluation failed');
+        }
         handleEvaluation(data);
     } catch (e) {
         console.error(e);
         UI.btnSubmit.disabled = false;
         UI.btnSubmit.textContent = 'SUBMIT ANSWER \u2192';
-        alert("Error submitting answer.");
+        if (window.showToast) window.showToast('SUBMISSION FAILED', e.message, 'error');
     }
 }
 
@@ -268,11 +283,18 @@ function handleEvaluation(data) {
         
     } else if (data.status === 'completed') {
         state.questionsAnswered++;
+        recordSessionEntry(data.is_correct, state.attemptCount > 1);
         
         document.querySelectorAll('.opt-card').forEach(c => c.classList.add('disabled', 'locked'));
         
         UI.btnSubmit.classList.add('hidden');
         UI.btnNext.classList.remove('hidden');
+        if (state.questionsAnswered >= SESSION_LENGTH) {
+            sessionComplete = true;
+            UI.btnNext.textContent = 'VIEW SESSION SUMMARY \u2192';
+        } else {
+            UI.btnNext.textContent = 'NEXT QUESTION \u2192';
+        }
         
         if (data.is_correct) {
             state.sessionCorrect++;
@@ -312,8 +334,23 @@ function handleEvaluation(data) {
     updateSessionSummary();
 }
 
+function recordSessionEntry(isCorrect, hintUsed) {
+    try {
+        const log = JSON.parse(sessionStorage.getItem('quiz_session') || '[]');
+        log.push({
+            question_id: state.questionId,
+            topic: document.getElementById('hdr-subject').textContent,
+            correct: !!isCorrect,
+            hint_used: !!hintUsed
+        });
+        sessionStorage.setItem('quiz_session', JSON.stringify(log));
+    } catch (e) {
+        console.warn('Could not persist session log', e);
+    }
+}
+
 function updateSessionSummary() {
-    document.getElementById('sess-count').textContent = `${state.questionsAnswered.toString().padStart(2, '0')} / 10`;
+    document.getElementById('sess-count').textContent = `${state.questionsAnswered.toString().padStart(2, '0')} / ${SESSION_LENGTH}`;
     document.getElementById('sess-correct').textContent = state.sessionCorrect;
     document.getElementById('sess-incorrect').textContent = state.sessionIncorrect;
     document.getElementById('sess-hints').textContent = state.sessionHints;

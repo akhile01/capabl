@@ -379,3 +379,7 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* Highlight the correct option once the question has been attempted */
+.detail-option.is-correct { border-color: var(--volt); }
+.detail-option.is-correct .opt-label { background: var(--volt); color: var(--white, #fff); }

@@ -1622,3 +1622,46 @@ ul {
     .search-input { width: 100%; }
 }
 
+
+/* ---------- Library: document rows, subject cards, upload form ---------- */
+.doc-header-row, .doc-row {
+    display: grid;
+    grid-template-columns: 2.2fr 1.2fr 1fr 0.8fr 0.9fr;
+    gap: 16px;
+    align-items: center;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+}
+.doc-header-row { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: var(--muted); }
+.doc-row { font-size: 14px; }
+.doc-row:hover { background: var(--surface-hover, rgba(255,255,255,0.03)); }
+.doc-row .d-name { font-weight: 600; display: flex; flex-direction: column; gap: 2px; word-break: break-word; }
+.doc-row .d-sub { font-size: 12px; color: var(--muted); font-weight: 400; }
+.doc-row .d-date { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--muted); }
+.doc-row .d-act { text-align: right; }
+.doc-row .row-action { background: none; border: none; font: inherit; opacity: 1; }
+.doc-row-empty { display: block; color: var(--muted); text-align: center; }
+.subject-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+.subject-card {
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 20px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, transform 0.15s ease;
+    background: var(--surface, transparent);
+}
+.subject-card:hover, .subject-card:focus-visible { border-color: var(--volt); transform: translateY(-2px); outline: none; }
+.subject-card .subject-name { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 18px; margin-bottom: 6px; }
+.subject-card .subject-meta { font-size: 13px; color: var(--muted); margin-bottom: 14px; }
+.subject-card .subject-cta { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: var(--volt); }
+.upload-fields { display: grid; gap: 12px; margin-bottom: 16px; }
+.upload-label { display: flex; flex-direction: column; gap: 6px; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: var(--muted); }
+.upload-label .req { color: var(--volt); }
+.upload-input { width: 100%; box-sizing: border-box; }
+.upload-input.input-error { border-color: #ff5c5c !important; }
+.drop-zone.dragover { border-color: var(--volt); background: rgba(54, 84, 255, 0.08); }
+@media (max-width: 720px) {
+    .doc-header-row { display: none; }
+    .doc-row { grid-template-columns: 1fr 1fr; }
+    .doc-row .d-act { text-align: left; }
+}

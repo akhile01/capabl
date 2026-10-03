@@ -118,6 +118,8 @@ async def ingest_document(file: UploadFile = File(...), subject: str = Form(...)
         conn.commit()
         conn.close()
         
+        result["filename"] = file.filename
+        result["document_id"] = doc_id
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -140,9 +142,14 @@ def get_subjects():
     return {"subjects": [r["subject"] for r in rows]}
 
 @app.get("/api/questions")
-def get_questions(subject: str = None, topic: str = None, difficulty: str = None):
+def get_questions(subject: str = None, topic: str = None, difficulty: str = None, student_id: Optional[str] = None):
+    """List generated questions, flattened for the question-bank UI.
+
+    When ``student_id`` is given, each question also carries the student's
+    attempt status (``correct`` / ``incorrect`` / ``unattempted``).
+    """
     conn = get_db_connection()
-    query = "SELECT * FROM generated_questions WHERE 1=1"
+    query = "SELECT id, subject, topic, difficulty, question_data, created_at FROM generated_questions WHERE 1=1"
     params = []
     if subject:
         query += " AND subject = ?"
@@ -153,22 +160,56 @@ def get_questions(subject: str = None, topic: str = None, difficulty: str = None
     if difficulty:
         query += " AND difficulty = ?"
         params.append(difficulty)
-        
+    query += " ORDER BY created_at DESC"
+
     rows = conn.execute(query, params).fetchall()
+
+    # Latest attempt per question for this student (performance_logs has one row per attempt)
+    attempts = {}
+    if student_id:
+        log_rows = conn.execute("""
+            SELECT question_id, correct, attempt_count, hint_used, timestamp
+            FROM performance_logs
+            WHERE student_id = ?
+            ORDER BY timestamp ASC, id ASC
+        """, (student_id,)).fetchall()
+        for lr in log_rows:
+            attempts[lr["question_id"]] = dict(lr)
     conn.close()
-    
+
     out = []
     for r in rows:
         d = dict(r)
-        if isinstance(d["question_data"], str):
+        qd = {}
+        if isinstance(d.get("question_data"), str):
             try:
                 qd = json.loads(d["question_data"])
-                d["bloom_level"] = qd.get("bloom_level")
-                d["validation_score"] = qd.get("validation_score")
-                d["generation_version"] = qd.get("generation_version")
-            except:
-                pass
-        out.append(d)
+            except Exception:
+                qd = {}
+        item = {
+            "id": d["id"],
+            "subject": d["subject"],
+            "topic": d["topic"],
+            "difficulty": d["difficulty"],
+            "date": d.get("created_at"),
+            "question_text": qd.get("question_text"),
+            "options": qd.get("options"),
+            "correct_answer": qd.get("correct_answer"),
+            "explanation": qd.get("explanation"),
+            "question_type": qd.get("question_type", "mcq"),
+            "bloom_level": qd.get("bloom_level"),
+            "source": qd.get("source_chunk_id"),
+            "validation_score": qd.get("validation_score"),
+            "generation_version": qd.get("generation_version"),
+            "status": "unattempted",
+            "user_answer": None,
+        }
+        attempt = attempts.get(d["id"])
+        if attempt:
+            item["status"] = "correct" if attempt["correct"] else "incorrect"
+            item["attempt_count"] = attempt["attempt_count"]
+            item["hint_used"] = bool(attempt["hint_used"])
+        out.append(item)
     return {"questions": out}
 
 @app.post("/api/questions/generate")

@@ -9,10 +9,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.location.href = '/quiz';
   });
   
+  const container = document.querySelector('.container');
+  container.id = 'summary-container';
+
   if (sessionLog.length === 0) {
-    document.getElementById('score-stat').innerHTML = `<span>0</span> / 0`;
-    switchState('container', 'loaded'); // scope fix
-    document.querySelector('.container').id = 'summary-container';
+    document.getElementById('score-stat').innerHTML = `<span>0</span> / 0 correct`;
+    document.getElementById('summary-tbody').innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted-dark);">No answers were recorded in this session.</td></tr>';
     switchState('summary-container', 'loaded');
     return;
   }
@@ -75,11 +77,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Clear session so it's fresh next time
     sessionStorage.removeItem('quiz_session');
     
-    document.querySelector('.container').id = 'summary-container';
     switchState('summary-container', 'loaded');
   } catch(err) {
     console.error(err);
-    document.querySelector('.container').id = 'summary-container';
     switchState('summary-container', 'loaded');
   }
 });

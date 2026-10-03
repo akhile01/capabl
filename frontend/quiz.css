@@ -344,3 +344,13 @@ kbd {
     .session-header { margin: 24px auto; padding: 0 16px; }
     .question-text { font-size: 24px; }
 }
+
+/* Error detail line (surfaces the backend's reason, e.g. missing API key or no ingested content) */
+#state-error .error-detail {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--muted, #8a8f98);
+    margin: -8px 0 24px;
+    word-break: break-word;
+}
+#state-error .error-detail:empty { display: none; }

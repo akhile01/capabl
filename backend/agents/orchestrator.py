@@ -166,6 +166,7 @@ class OrchestratorAgent:
         return {
             "status": "success",
             "question": question_dict,
+            "mastery": mastery,
             "reason": f"Selected {selected_topic} ({difficulty}) due to mastery={mastery:.2f}."
         }
 

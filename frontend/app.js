@@ -2,18 +2,40 @@ const API_BASE = '/api';
 
 // For MVP, we auto-create/fetch a default student
 let currentUser = null;
+const DEFAULT_STUDENT_NAME = 'Student';
+
+function getSubject() {
+    return localStorage.getItem('subject') || 'Unknown';
+}
+
+function getStudentName() {
+    return localStorage.getItem('student_name') || DEFAULT_STUDENT_NAME;
+}
+
+function escapeHtml(value) {
+    const div = document.createElement('div');
+    div.textContent = value == null ? '' : String(value);
+    return div.innerHTML;
+}
+
+function quizUrlForTopic(topic) {
+    return topic ? `/quiz?topic=${encodeURIComponent(topic)}` : '/quiz';
+}
 
 async function getOrCreateStudent() {
     let studentId = localStorage.getItem('student_id');
     if (!studentId) {
+        const name = getStudentName();
         const res = await fetch(`${API_BASE}/students`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ name: 'Rajeev' })
+            body: JSON.stringify({ name })
         });
+        if (!res.ok) throw new Error(`Could not create student (HTTP ${res.status})`);
         const data = await res.json();
         studentId = data.student_id;
         localStorage.setItem('student_id', studentId);
+        localStorage.setItem('student_name', name);
     }
     currentUser = studentId;
     return studentId;
@@ -25,11 +47,15 @@ async function initDashboard() {
     
     // Set Student Name 
     const heroName = document.getElementById('hero-name');
-    if (heroName) heroName.textContent = 'Rajeev';
+    if (heroName) heroName.textContent = getStudentName();
+    const avatar = document.getElementById('nav-avatar');
+    if (avatar) avatar.textContent = getStudentName().charAt(0).toUpperCase();
+    
+    const subjectParam = `?subject=${encodeURIComponent(getSubject())}`;
     
     // Load Revision
     try {
-        const revRes = await fetch(`${API_BASE}/revision/${studentId}`);
+        const revRes = await fetch(`${API_BASE}/revision/${studentId}${subjectParam}`);
         const revData = await revRes.json();
         renderRevision(revData.revision);
     } catch (e) {
@@ -39,7 +65,7 @@ async function initDashboard() {
     
     // Load Analytics
     try {
-        const anRes = await fetch(`${API_BASE}/analytics/${studentId}`);
+        const anRes = await fetch(`${API_BASE}/analytics/${studentId}${subjectParam}`);
         const anData = await anRes.json();
         renderAnalytics(anData);
     } catch (e) {
@@ -54,6 +80,10 @@ function renderRevision(revisionList) {
     if (revisionList && revisionList.length > 0) {
         const rec = revisionList[0];
         document.getElementById('rec-topic').textContent = rec.topic;
+        const startBtn = document.getElementById('rec-start-btn');
+        if (startBtn) startBtn.onclick = () => window.location.href = quizUrlForTopic(rec.topic);
+        const viewBtn = document.getElementById('rec-view-btn');
+        if (viewBtn) viewBtn.onclick = () => window.location.href = `/questions?topic=${encodeURIComponent(rec.topic)}`;
         document.getElementById('rec-mastery').textContent = `${(rec.mastery_level * 100).toFixed(0)}%`;
         
         const recStatus = document.querySelector('.panel-status');
@@ -77,6 +107,14 @@ function renderRevision(revisionList) {
     }
 
     if (!revisionList || revisionList.length === 0) {
+        document.getElementById('rec-topic').textContent = 'Your first adaptive session';
+        document.getElementById('rec-mastery').textContent = '0%';
+        const recStatus = document.querySelector('.panel-status');
+        if (recStatus) { recStatus.textContent = 'NEW'; recStatus.className = 'panel-status status-weak'; }
+        document.getElementById('rec-desc').textContent = 'No topic history yet. Start practicing and the orchestrator will begin tracking your mastery.';
+        document.getElementById('stat-due').textContent = '0';
+        const viewBtn = document.getElementById('rec-view-btn');
+        if (viewBtn) viewBtn.onclick = () => window.location.href = '/questions';
         container.innerHTML = '<div class="editorial-row">Ready to start! Your first question awaits.</div>';
         return;
     }
@@ -93,12 +131,15 @@ function renderRevision(revisionList) {
         div.className = 'editorial-row';
         div.innerHTML = `
             <div class="row-num">0${index + 1}</div>
-            <div class="row-title">${item.topic}</div>
+            <div class="row-title">${escapeHtml(item.topic)}</div>
             <div class="row-status ${statusClass}">${status}</div>
             <div class="row-mastery">${(item.mastery_level * 100).toFixed(0)}%</div>
             <div class="row-diff">MIXED</div>
-            <div class="row-action" onclick="window.location.href='/quiz'">REVIEW &rarr;</div>
+            <div class="row-action" role="button" tabindex="0">REVIEW &rarr;</div>
         `;
+        const action = div.querySelector('.row-action');
+        action.onclick = () => window.location.href = quizUrlForTopic(item.topic);
+        action.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') action.onclick(); };
         container.appendChild(div);
     });
 }
@@ -123,7 +164,7 @@ function renderAnalytics(data) {
             mc.innerHTML += `
                 <div class="mastery-item">
                     <div class="mastery-top">
-                        <span class="mastery-title">${m.topic}</span>
+                        <span class="mastery-title">${escapeHtml(m.topic)}</span>
                         <span class="mastery-pct">${pct.toFixed(0)}%</span>
                     </div>
                     <div class="mastery-bar-wrap">
@@ -152,8 +193,8 @@ function renderAnalytics(data) {
             const timeStr = 'Recent'; 
             pl.innerHTML += `
                 <div class="editorial-row perf-row">
-                    <div class="row-title">${p.topic}</div>
-                    <div class="row-diff">${p.difficulty.toUpperCase()}</div>
+                    <div class="row-title">${escapeHtml(p.topic)}</div>
+                    <div class="row-diff">${escapeHtml((p.difficulty || '').toUpperCase())}</div>
                     <div class="row-status ${p.correct ? 'strong' : 'weak'}">${p.correct ? '✓ Correct' : '✗ Incorrect'}</div>
                     <div class="row-status">${p.hint_used ? 'Hint used' : 'No hint'}</div>
                     <div class="row-status" style="text-align: right;">${timeStr}</div>
@@ -189,157 +230,6 @@ function renderTrend(performances) {
         }
         viz.appendChild(bar);
     }
-}
-
-// Keep Quiz logic unchanged for quiz.html
-let currentQuestionId = null;
-let selectedOption = null;
-let attemptCount = 1;
-
-async function initQuiz() {
-    const studentId = await getOrCreateStudent();
-    fetchNextQuestion(studentId);
-    
-    const submitBtn = document.getElementById('submit-btn');
-    if (submitBtn) {
-        submitBtn.addEventListener('click', () => submitAnswer(studentId));
-    }
-    
-    const nextBtn = document.getElementById('next-btn');
-    if (nextBtn) {
-        nextBtn.addEventListener('click', () => {
-            resetQuizUI();
-            fetchNextQuestion(studentId);
-        });
-    }
-}
-
-async function fetchNextQuestion(studentId) {
-    document.getElementById('loading-state').classList.remove('hidden');
-    document.getElementById('question-state').classList.add('hidden');
-    document.getElementById('error-state').classList.add('hidden');
-    document.getElementById('submit-btn').classList.remove('hidden');
-    document.getElementById('next-btn').classList.add('hidden');
-    
-    try {
-        const res = await fetch(`${API_BASE}/next_question/${studentId}`);
-        const data = await res.json();
-        
-        if (data.status === 'success') {
-            displayQuestion(data.question, data.reason);
-        } else {
-            throw new Error(data.message);
-        }
-    } catch (e) {
-        console.error(e);
-        document.getElementById('loading-state').classList.add('hidden');
-        document.getElementById('error-state').classList.remove('hidden');
-    }
-}
-
-function displayQuestion(question, reason) {
-    currentQuestionId = question.id;
-    attemptCount = 1;
-    
-    document.getElementById('current-topic-badge').textContent = question.topic;
-    document.getElementById('q-difficulty').textContent = question.difficulty;
-    document.getElementById('question-text').textContent = question.question_text;
-    document.getElementById('selection-reason').textContent = reason;
-    
-    const container = document.getElementById('options-container');
-    container.innerHTML = '';
-    
-    question.options.forEach((opt, index) => {
-        const btn = document.createElement('button');
-        btn.className = 'option-btn';
-        btn.textContent = opt;
-        btn.dataset.value = opt;
-        btn.addEventListener('click', () => selectOption(btn));
-        container.appendChild(btn);
-    });
-    
-    document.getElementById('loading-state').classList.add('hidden');
-    document.getElementById('question-state').classList.remove('hidden');
-}
-
-function selectOption(btn) {
-    if (btn.classList.contains('disabled')) return;
-    
-    document.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
-    btn.classList.add('selected');
-    selectedOption = btn.dataset.value;
-    document.getElementById('submit-btn').disabled = false;
-}
-
-async function submitAnswer(studentId) {
-    if (!selectedOption) return;
-    
-    const submitBtn = document.getElementById('submit-btn');
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'Evaluating...';
-    
-    try {
-        const res = await fetch(`${API_BASE}/answer/${studentId}`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                question_id: currentQuestionId,
-                answer: selectedOption,
-                attempt_count: attemptCount
-            })
-        });
-        const data = await res.json();
-        
-        handleFeedback(data);
-    } catch (e) {
-        console.error(e);
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Submit Answer';
-    }
-}
-
-function handleFeedback(data) {
-    const feedbackBox = document.getElementById('feedback-container');
-    feedbackBox.classList.remove('hidden', 'correct', 'incorrect');
-    
-    const selectedBtn = document.querySelector('.option-btn.selected');
-    
-    if (data.status === 'completed') {
-        document.querySelectorAll('.option-btn').forEach(b => b.classList.add('disabled'));
-        document.getElementById('submit-btn').classList.add('hidden');
-        document.getElementById('next-btn').classList.remove('hidden');
-        
-        if (data.is_correct) {
-            feedbackBox.classList.add('correct');
-            feedbackBox.innerHTML = `<h4>Correct!</h4><p>${data.feedback}</p>`;
-            if(selectedBtn) selectedBtn.classList.add('correct');
-        } else {
-            feedbackBox.classList.add('incorrect');
-            feedbackBox.innerHTML = `<h4>Incorrect.</h4><p>${data.explanation || data.feedback}</p>`;
-            if(selectedBtn) selectedBtn.classList.add('incorrect');
-        }
-    } else if (data.status === 'retry') {
-        feedbackBox.classList.add('incorrect');
-        feedbackBox.innerHTML = `<h4>Think again (Hint):</h4><p>${data.feedback}</p>`;
-        
-        if(selectedBtn) {
-            selectedBtn.classList.remove('selected');
-            selectedBtn.classList.add('incorrect', 'disabled');
-        }
-        
-        selectedOption = null;
-        attemptCount++;
-        
-        const submitBtn = document.getElementById('submit-btn');
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Submit Answer';
-    }
-}
-
-function resetQuizUI() {
-    document.getElementById('feedback-container').classList.add('hidden');
-    document.getElementById('submit-btn').textContent = 'Submit Answer';
-    document.getElementById('submit-btn').disabled = true;
 }
 
 // --- GLOBAL TOAST SYSTEM ---

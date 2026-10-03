@@ -25,11 +25,11 @@
         <div class="nav-left">
             <div class="logo">AdaptEd</div>
             <div class="nav-links">
-                <a href="/">Dashboard</a>
+                <a href="/dashboard">Dashboard</a>
                 <a href="/quiz">Practice</a>
                 <a href="/progress">Progress</a>
                 <a href="/library" class="active">Library</a>
-                <a href="/static/questions.html">Questions</a>
+                <a href="/questions">Questions</a>
             </div>
         </div>
         <div class="nav-right">
@@ -82,7 +82,7 @@
                         <div class="empty-icon">📂</div>
                         <h2 class="empty-title">YOUR KNOWLEDGE BASE STARTS HERE</h2>
                         <p class="empty-desc">Add your first learning material and AdaptEd will prepare it for adaptive learning.</p>
-                        <p class="empty-meta">Supported formats will depend on your current content ingestion system.</p>
+                        <p class="empty-meta">PDF textbooks and notes are supported. Each upload is chunked, embedded and indexed for question generation.</p>
                         <button class="btn-primary" onclick="openUploadModal()">+ ADD LEARNING MATERIAL</button>
                     </div>
 
@@ -141,12 +141,22 @@
             </div>
             <p class="modal-sub">Upload material that AdaptEd can use to build your learning context.</p>
             
-            <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
-                <div class="drop-icon">+</div>
-                <div class="drop-text">DROP YOUR MATERIAL HERE</div>
-                <div class="drop-sub">or choose a file</div>
-                <div class="drop-meta">PDF · DOCX · TXT</div>
-                <input type="file" id="file-input" class="hidden" accept=".pdf,.docx,.txt" onchange="handleFileSelect(event)">
+            <div id="upload-form">
+                <div class="upload-fields">
+                    <label class="upload-label" for="upload-subject">SUBJECT <span class="req">*</span>
+                        <input type="text" id="upload-subject" class="search-input upload-input" placeholder="e.g. Database Systems" maxlength="80" autocomplete="off">
+                    </label>
+                    <label class="upload-label" for="upload-chapter">CHAPTER / UNIT (optional)
+                        <input type="text" id="upload-chapter" class="search-input upload-input" placeholder="e.g. Unit 5 — Transactions" maxlength="80" autocomplete="off">
+                    </label>
+                </div>
+                <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+                    <div class="drop-icon">+</div>
+                    <div class="drop-text">DROP YOUR MATERIAL HERE</div>
+                    <div class="drop-sub">or choose a file</div>
+                    <div class="drop-meta">PDF · MAX 25 MB</div>
+                    <input type="file" id="file-input" class="hidden" accept=".pdf,application/pdf" onchange="handleFileSelect(event)">
+                </div>
             </div>
             
             <div class="upload-state hidden" id="upload-state">
@@ -159,7 +169,7 @@
             
             <div class="upload-error hidden" id="upload-error">
                 <div class="err-title">CONTENT COULD NOT BE PROCESSED</div>
-                <div class="err-desc">AdaptEd couldn't prepare this material. (Backend endpoint unavailable)</div>
+                <div class="err-desc" id="upload-error-desc">AdaptEd couldn't prepare this material.</div>
                 <div class="err-actions">
                     <button class="btn-primary" onclick="resetUpload()">TRY AGAIN</button>
                     <button class="btn-secondary" onclick="closeUploadModal()">REMOVE</button>

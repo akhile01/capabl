@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', async () => {
   if (API.getStudentId()) {
-    window.location.href = '/';
+    window.location.href = '/dashboard';
     return;
   }
 
@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       const data = await API.post('/students', { name });
       API.setStudent(data.student_id, data.name, subject);
-      window.location.href = '/';
+      window.location.href = '/dashboard';
     } catch (err) {
       alert('Failed to create student: ' + err.message);
       btn.disabled = false;

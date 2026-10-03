@@ -13,3 +13,5 @@ python-dotenv
 langchain-chroma
 fastapi
 uvicorn
+python-multipart
+langgraph
