@@ -150,12 +150,17 @@
                         <input type="text" id="upload-chapter" class="search-input upload-input" placeholder="e.g. Unit 5 — Transactions" maxlength="80" autocomplete="off">
                     </label>
                 </div>
-                <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+                <div class="drop-zone" id="drop-zone">
                     <div class="drop-icon">+</div>
-                    <div class="drop-text">DROP YOUR MATERIAL HERE</div>
-                    <div class="drop-sub">or choose a file</div>
-                    <div class="drop-meta">PDF · MAX 25 MB</div>
-                    <input type="file" id="file-input" class="hidden" accept=".pdf,application/pdf" onchange="handleFileSelect(event)">
+                    <div class="drop-text" id="drop-text">DROP YOUR MATERIAL HERE</div>
+                    <div class="drop-sub" id="drop-sub">or choose a file from your computer</div>
+                    <div class="drop-meta">PDF, TXT, MD · MAX 25 MB</div>
+                </div>
+                <input type="file" id="file-input" style="display:none;" accept=".pdf,.txt,.md,application/pdf,text/plain,text/markdown" onchange="handleFileSelect(event)">
+                
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="closeUploadModal()">CANCEL</button>
+                    <button type="button" class="btn-primary" id="btn-submit-upload" onclick="submitUpload()">UPLOAD MATERIAL &rarr;</button>
                 </div>
             </div>
             

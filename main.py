@@ -1,8 +1,9 @@
 import os
 import sys
+import re
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 from typing import Optional
 from contextlib import asynccontextmanager
@@ -56,15 +57,49 @@ def get_revision(student_id: str, subject: str = "Unknown"):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+from fastapi.responses import FileResponse, JSONResponse
+import logging
+
+logger = logging.getLogger(__name__)
+
+def _sanitize_error_msg(msg: str) -> str:
+    """Removes potential API keys or sensitive secrets from error messages."""
+    if not msg:
+        return "An internal generation error occurred."
+    clean = re.sub(r'(?:AIza[0-9A-Za-z-_]{35}|nova_sk_[0-9A-Za-z-_]{20,}|sk-[0-9A-Za-z]{20,})', '[REDACTED_KEY]', str(msg))
+    return clean
+
 @app.get("/api/next_question/{student_id}")
 def get_next_question(student_id: str, subject: str = "Unknown", topic: Optional[str] = None):
     try:
         result = orchestrator.get_next_question(student_id, subject, topic=topic)
-        if result.get("status") == "error":
-            raise HTTPException(status_code=500, detail=result.get("message"))
+        if result.get("status") == "error" or not result.get("success", True):
+            err_msg = result.get("message") or "Failed to generate question"
+            err_details = _sanitize_error_msg(result.get("details") or err_msg)
+            logger.error(f"[Adaptive Practice] Question generation error: {err_msg} | Details: {err_details}")
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "status": "error",
+                    "error": "Question generation failed",
+                    "details": err_details,
+                    "message": err_msg
+                }
+            )
         return result
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"[Adaptive Practice] Pipeline exception for student {student_id}: {e}", exc_info=True)
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "status": "error",
+                "error": "Question generation failed",
+                "details": _sanitize_error_msg(str(e)),
+                "message": "Question generation failed"
+            }
+        )
 
 @app.post("/api/answer/{student_id}")
 def submit_answer(student_id: str, submission: AnswerSubmit):
@@ -108,8 +143,12 @@ async def ingest_document(file: UploadFile = File(...), subject: str = Form(...)
         import json
         doc_id = str(uuid.uuid4())
         
-        # We need a safe fallback for topics, maybe just a default or empty list
+        # Provide meaningful extracted topics
         topics = []
+        if chapter and chapter.strip():
+            topics.append(chapter.strip())
+        if subject and subject.strip() and subject.strip() not in topics:
+            topics.append(subject.strip())
         
         conn.execute("""
             INSERT INTO ingested_documents (id, filename, subject, chapters, extracted_topics, status)

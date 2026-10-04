@@ -115,8 +115,11 @@ function formatDate(value) {
 }
 
 // ---------- Upload modal ----------
+let currentSelectedFile = null;
+
 function openUploadModal() {
-    document.getElementById('upload-modal').classList.remove('hidden');
+    const modal = document.getElementById('upload-modal');
+    if (modal) modal.classList.remove('hidden');
     resetUpload();
     const subjectInput = document.getElementById('upload-subject');
     if (subjectInput && !subjectInput.value) {
@@ -124,92 +127,159 @@ function openUploadModal() {
         if (saved && saved !== 'Unknown') subjectInput.value = saved;
     }
 }
+window.openUploadModal = openUploadModal;
 
 function closeUploadModal() {
-    document.getElementById('upload-modal').classList.add('hidden');
+    const modal = document.getElementById('upload-modal');
+    if (modal) modal.classList.add('hidden');
+    resetUpload();
 }
+window.closeUploadModal = closeUploadModal;
 
 function resetUpload() {
-    document.getElementById('upload-form').classList.remove('hidden');
-    document.getElementById('upload-state').classList.add('hidden');
-    document.getElementById('upload-error').classList.add('hidden');
-    document.getElementById('file-input').value = '';
-    setPendingFile(null);
-}
-
-function setPendingFile(file) {
-    pendingFile = file;
-    const text = document.querySelector('#drop-zone .drop-text');
-    const sub = document.querySelector('#drop-zone .drop-sub');
-    if (!text || !sub) return;
-    if (file) {
-        text.textContent = `SELECTED: ${file.name}`;
-        sub.textContent = 'Enter a subject above and press Enter to upload';
-    } else {
-        text.textContent = 'DROP YOUR MATERIAL HERE';
-        sub.textContent = 'or choose a file';
-    }
-}
-
-function setupDropZone() {
+    currentSelectedFile = null;
+    pendingFile = null;
+    const form = document.getElementById('upload-form');
+    const stateEl = document.getElementById('upload-state');
+    const errEl = document.getElementById('upload-error');
+    const fileInput = document.getElementById('file-input');
     const zone = document.getElementById('drop-zone');
-    if (!zone) return;
-    ['dragenter', 'dragover'].forEach(evt => zone.addEventListener(evt, e => {
-        e.preventDefault();
-        zone.classList.add('dragover');
-    }));
-    ['dragleave', 'drop'].forEach(evt => zone.addEventListener(evt, e => {
-        e.preventDefault();
-        zone.classList.remove('dragover');
-    }));
-    zone.addEventListener('drop', e => {
-        const file = e.dataTransfer?.files?.[0];
-        if (file) uploadFile(file);
-    });
-    // A file picked before the subject was filled in uploads once the subject is confirmed
+    const dropText = document.getElementById('drop-text');
+    const dropSub = document.getElementById('drop-sub');
+    
+    if (form) form.classList.remove('hidden');
+    if (stateEl) stateEl.classList.add('hidden');
+    if (errEl) errEl.classList.add('hidden');
+    if (fileInput) fileInput.value = '';
+    if (zone) zone.classList.remove('has-file', 'dragover');
+    if (dropText) dropText.textContent = 'DROP YOUR MATERIAL HERE';
+    if (dropSub) dropSub.textContent = 'or choose a file from your computer';
+    
     const subjectInput = document.getElementById('upload-subject');
-    if (subjectInput) {
-        subjectInput.addEventListener('keydown', e => {
-            if (e.key === 'Enter') { e.preventDefault(); if (pendingFile) uploadFile(pendingFile); }
-        });
-        subjectInput.addEventListener('change', () => { if (pendingFile && subjectInput.value.trim()) uploadFile(pendingFile); });
+    if (subjectInput) subjectInput.classList.remove('input-error');
+}
+window.resetUpload = resetUpload;
+
+function formatFileSize(bytes) {
+    if (!bytes) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+
+function handleFileChosen(file) {
+    if (!file) return;
+    currentSelectedFile = file;
+    
+    const dropText = document.getElementById('drop-text');
+    const dropSub = document.getElementById('drop-sub');
+    const zone = document.getElementById('drop-zone');
+    
+    if (dropText) dropText.textContent = `✓ ${file.name}`;
+    if (dropSub) dropSub.textContent = `${formatFileSize(file.size)} · Ready to upload (click to change)`;
+    if (zone) zone.classList.add('has-file');
+    
+    const subjectInput = document.getElementById('upload-subject');
+    if (subjectInput && !subjectInput.value.trim()) {
+        subjectInput.focus();
     }
-    // Close the modal when clicking the dark backdrop or pressing Escape
-    const modal = document.getElementById('upload-modal');
-    modal.addEventListener('click', e => { if (e.target === modal) closeUploadModal(); });
-    document.addEventListener('keydown', e => {
-        if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeUploadModal();
-    });
 }
 
 function handleFileSelect(e) {
-    const file = e.target.files[0];
-    if (file) uploadFile(file);
+    const file = e.target.files && e.target.files[0];
+    if (file) handleFileChosen(file);
+}
+window.handleFileSelect = handleFileSelect;
+
+function setupDropZone() {
+    const zone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+    
+    if (zone) {
+        zone.addEventListener('click', (e) => {
+            if (fileInput) fileInput.click();
+        });
+        
+        ['dragenter', 'dragover'].forEach(evt => zone.addEventListener(evt, e => {
+            e.preventDefault();
+            zone.classList.add('dragover');
+        }));
+        
+        ['dragleave', 'drop'].forEach(evt => zone.addEventListener(evt, e => {
+            e.preventDefault();
+            zone.classList.remove('dragover');
+        }));
+        
+        zone.addEventListener('drop', e => {
+            const file = e.dataTransfer?.files?.[0];
+            if (file) handleFileChosen(file);
+        });
+    }
+
+    const subjectInput = document.getElementById('upload-subject');
+    if (subjectInput) {
+        subjectInput.addEventListener('keydown', e => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                submitUpload();
+            }
+        });
+    }
+
+    const chapterInput = document.getElementById('upload-chapter');
+    if (chapterInput) {
+        chapterInput.addEventListener('keydown', e => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                submitUpload();
+            }
+        });
+    }
+
+    const modal = document.getElementById('upload-modal');
+    if (modal) {
+        modal.addEventListener('click', e => { if (e.target === modal) closeUploadModal(); });
+    }
+    
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && modal && !modal.classList.contains('hidden')) closeUploadModal();
+    });
 }
 
-async function uploadFile(file) {
+async function submitUpload() {
     const subjectInput = document.getElementById('upload-subject');
     const chapterInput = document.getElementById('upload-chapter');
     const subject = (subjectInput?.value || '').trim();
-
+    
     if (!subject) {
-        // Keep the file; the browser won't fire another change event for the same selection
-        setPendingFile(file);
-        document.getElementById('file-input').value = '';
-        subjectInput.classList.add('input-error');
-        subjectInput.focus();
-        if (window.showToast) window.showToast('SUBJECT REQUIRED', 'Enter the subject this material belongs to, then press Enter.', 'warning');
+        if (subjectInput) {
+            subjectInput.classList.add('input-error');
+            subjectInput.focus();
+        }
+        if (window.showToast) window.showToast('SUBJECT REQUIRED', 'Please enter a subject for this learning material.', 'warning');
         return;
     }
-    subjectInput.classList.remove('input-error');
-    setPendingFile(null);
+    if (subjectInput) subjectInput.classList.remove('input-error');
 
-    if (!file.name.toLowerCase().endsWith('.pdf')) {
-        showUploadError('Only PDF files are supported by the content ingestion agent right now.');
+    const file = currentSelectedFile || (document.getElementById('file-input')?.files?.[0]);
+    if (!file) {
+        const fileInput = document.getElementById('file-input');
+        if (fileInput) fileInput.click();
+        if (window.showToast) window.showToast('FILE REQUIRED', 'Please choose a PDF or document file to upload.', 'warning');
         return;
     }
+
+    const lower = file.name.toLowerCase();
+    const validExts = ['.pdf', '.txt', '.md', '.markdown', '.json', '.csv'];
+    const hasValidExt = validExts.some(ext => lower.endsWith(ext));
+    if (!hasValidExt) {
+        showUploadError('Supported formats: PDF, TXT, Markdown, CSV, JSON.');
+        return;
+    }
+
     if (file.size > 25 * 1024 * 1024) {
-        showUploadError('File too large. The maximum size is 25 MB.');
+        showUploadError('File is too large. Maximum supported size is 25 MB.');
         return;
     }
 
@@ -217,12 +287,14 @@ async function uploadFile(file) {
     document.getElementById('upload-error').classList.add('hidden');
     document.getElementById('upload-state').classList.remove('hidden');
     document.getElementById('up-filename').textContent = file.name;
-    document.getElementById('up-status').textContent = 'UPLOADING & EXTRACTING CONTENT...';
+    document.getElementById('up-status').textContent = 'INGESTING & INDEXING CONTENT...';
 
     const form = new FormData();
     form.append('file', file);
     form.append('subject', subject);
-    if (chapterInput && chapterInput.value.trim()) form.append('chapter', chapterInput.value.trim());
+    if (chapterInput && chapterInput.value.trim()) {
+        form.append('chapter', chapterInput.value.trim());
+    }
 
     try {
         const res = await fetch(`${API_BASE}/ingest`, { method: 'POST', body: form });
@@ -233,15 +305,16 @@ async function uploadFile(file) {
         localStorage.setItem('subject', subject);
         closeUploadModal();
         if (window.showToast) {
-            const chunks = data.chunks_stored != null ? ` ${data.chunks_stored} chunks indexed.` : '';
-            window.showToast('MATERIAL READY', `${file.name} was processed.${chunks}`, 'success');
+            const chunks = data.chunks_stored != null ? ` (${data.chunks_stored} knowledge chunks indexed)` : '';
+            window.showToast('MATERIAL READY', `${file.name} processed successfully.${chunks}`, 'success');
         }
         await initLibrary();
     } catch (e) {
-        console.error(e);
-        showUploadError(e.message);
+        console.error('Upload failed:', e);
+        showUploadError(e.message || 'Error occurred while processing file.');
     }
 }
+window.submitUpload = submitUpload;
 
 function showUploadError(message) {
     document.getElementById('upload-form').classList.add('hidden');
@@ -254,3 +327,4 @@ function showUploadError(message) {
 function retryUpload() {
     resetUpload();
 }
+window.retryUpload = retryUpload;

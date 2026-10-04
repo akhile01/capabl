@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from langchain_core.documents import Document
 
 from backend.services.chunker import split_documents
-from backend.services.document_loader import load_pdf
+from backend.services.document_loader import load_document, load_pdf
 from backend.services.metadata_tagger import tag_chunk
 from backend.services.vector_store import add_documents
 from backend.services.vector_store import search as vs_search
@@ -36,19 +36,19 @@ class ContentIngestionAgent:
         return "\n".join([line for line in lines if line]).strip()
 
     def ingest(self, file_path: str) -> Dict[str, Any]:
-        """Runs the content ingestion pipeline on a local PDF file.
+        """Runs the content ingestion pipeline on a document file.
 
         Args:
-            file_path: The local path to the PDF.
+            file_path: The local path to the document.
 
         Returns:
             A summary dictionary containing status, page count, and chunk counts.
         """
         if not os.path.exists(file_path):
-            raise FileNotFoundError(f"PDF file not found at: {file_path}")
+            raise FileNotFoundError(f"File not found at: {file_path}")
 
-        # 1. Load PDF
-        documents = load_pdf(file_path)
+        # 1. Load document (PDF, TXT, MD, etc.)
+        documents = load_document(file_path)
         pages_count = len(documents)
 
         # 2. Clean text

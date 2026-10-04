@@ -55,3 +55,46 @@ def load_pdf(file_path: str) -> List[Document]:
         raise ValueError(f"Failed to read PDF file {file_path}: {str(e)}")
 
     return documents
+
+
+def load_text(file_path: str) -> List[Document]:
+    """Loads a plain text or markdown file into Document objects."""
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"File not found at: {file_path}")
+    
+    text = ""
+    for enc in ["utf-8", "latin-1", "utf-16"]:
+        try:
+            with open(file_path, "r", encoding=enc) as f:
+                text = f.read()
+                break
+        except Exception:
+            continue
+
+    if not text.strip():
+        raise ValueError(f"File {file_path} is empty or unreadable")
+
+    # Split into rough page-like segments if very long, or single document
+    metadata = {
+        "source": os.path.basename(file_path),
+        "page": 1,
+    }
+    return [Document(page_content=text, metadata=metadata)]
+
+
+def load_document(file_path: str) -> List[Document]:
+    """Loads a document based on file extension (PDF, TXT, MD, etc.)."""
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"File not found at: {file_path}")
+
+    ext = os.path.splitext(file_path)[1].lower()
+    if ext == ".pdf":
+        return load_pdf(file_path)
+    elif ext in [".txt", ".md", ".markdown", ".csv", ".json"]:
+        return load_text(file_path)
+    else:
+        try:
+            return load_pdf(file_path)
+        except Exception:
+            return load_text(file_path)
+

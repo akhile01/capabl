@@ -64,6 +64,54 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
+let isFetching = false;
+
+function updateAgentStatuses(status) {
+    const stripOrc = document.getElementById('strip-orchestrator');
+    const stripQGen = document.getElementById('strip-qgen');
+    const panelOrc = document.getElementById('panel-orchestrator-state');
+    const panelQGen = document.getElementById('panel-qgen-state');
+
+    if (status === 'loading') {
+        if (stripOrc) stripOrc.innerHTML = '<span class="indicator">●</span> ORCHESTRATOR ACTIVE';
+        if (stripQGen) stripQGen.innerHTML = '<span class="indicator">●</span> QUESTION GEN WORKING';
+        if (panelOrc) {
+            panelOrc.textContent = '● ACTIVE';
+            panelOrc.className = 'agent-state active';
+        }
+        if (panelQGen) {
+            panelQGen.textContent = '● GENERATING';
+            panelQGen.className = 'agent-state';
+        }
+    } else if (status === 'error') {
+        if (stripOrc) stripOrc.innerHTML = '<span class="indicator" style="color:var(--volt,#ffaa00)">▲</span> ORCHESTRATOR DEGRADED';
+        if (stripQGen) stripQGen.innerHTML = '<span class="indicator" style="color:#ff4444">✗</span> QUESTION GEN FAILED';
+        if (panelOrc) {
+            panelOrc.textContent = '▲ DEGRADED';
+            panelOrc.className = 'agent-state';
+            panelOrc.style.color = 'var(--volt,#ffaa00)';
+        }
+        if (panelQGen) {
+            panelQGen.textContent = '✗ FAILED';
+            panelQGen.className = 'agent-state';
+            panelQGen.style.color = '#ff4444';
+        }
+    } else if (status === 'ready') {
+        if (stripOrc) stripOrc.innerHTML = '<span class="indicator">●</span> ORCHESTRATOR ACTIVE';
+        if (stripQGen) stripQGen.innerHTML = '<span class="indicator">✓</span> QUESTION GEN READY';
+        if (panelOrc) {
+            panelOrc.textContent = '● ACTIVE';
+            panelOrc.className = 'agent-state active';
+            panelOrc.style.color = '';
+        }
+        if (panelQGen) {
+            panelQGen.textContent = '● READY';
+            panelQGen.className = 'agent-state';
+            panelQGen.style.color = '';
+        }
+    }
+}
+
 async function initQuiz() {
     try {
         studentId = await getOrCreateStudent();
@@ -91,6 +139,7 @@ function startLoading() {
     UI.stateError.classList.add('hidden');
     UI.stateActive.classList.add('hidden');
     UI.stateLoading.classList.remove('hidden');
+    updateAgentStatuses('loading');
     
     let i = 0;
     UI.loadingRotator.textContent = loadingTexts[0];
@@ -108,19 +157,27 @@ function stopLoading() {
 
 function showError(message) {
     stopLoading();
+    updateAgentStatuses('error');
     UI.stateActive.classList.add('hidden');
     UI.stateError.classList.remove('hidden');
     const detail = document.getElementById('error-detail');
     if (detail) detail.textContent = message || '';
 }
 
-window.retryFetch = fetchNextQuestion;
+window.retryFetch = function() {
+    if (!isFetching) {
+        fetchNextQuestion();
+    }
+};
 
 async function fetchNextQuestion() {
     if (sessionComplete) {
         window.location.href = '/quiz/summary';
         return;
     }
+    if (isFetching) return;
+    isFetching = true;
+
     startLoading();
     state.selectedOption = null;
     state.attemptCount = 1;
@@ -131,19 +188,23 @@ async function fetchNextQuestion() {
         const res = await fetch(`${API_BASE}/next_question/${studentId}?${params.toString()}`);
         const data = await res.json();
         
-        if (res.ok && data.status === 'success') {
+        if (res.ok && (data.status === 'success' || data.success === true)) {
             renderQuestion(data.question, data.reason, data.mastery);
         } else {
-            showError(data.detail || data.message || 'The server could not provide a question.');
+            const errorMsg = data.details || (typeof data.detail === 'string' ? data.detail : data.detail?.details) || data.error || data.message || 'The server could not provide a question.';
+            showError(errorMsg);
         }
     } catch (e) {
         console.error(e);
         showError('Could not reach the server. Check that the backend is running.');
+    } finally {
+        isFetching = false;
     }
 }
 
 function renderQuestion(q, reason, mastery) {
     stopLoading();
+    updateAgentStatuses('ready');
     UI.stateActive.classList.remove('hidden');
     
     // Reset panels
@@ -157,13 +218,16 @@ function renderQuestion(q, reason, mastery) {
     UI.btnSubmit.textContent = 'SUBMIT ANSWER \u2192';
     UI.btnNext.classList.add('hidden');
     
+    const optionsList = Array.isArray(q.options) ? q.options : (q.choices || []);
     state.questionId = q.id;
-    state.options = q.options;
+    state.options = optionsList;
     
     // Header info
-    document.getElementById('hdr-subject').textContent = q.topic;
-    document.getElementById('hdr-subj-badge').textContent = (q.subject || currentSubject()).toUpperCase();
-    document.getElementById('hdr-diff').textContent = (q.difficulty || 'MEDIUM').toUpperCase();
+    const topicName = q.topic || 'Database Systems';
+    document.getElementById('hdr-subject').textContent = topicName;
+    document.getElementById('hdr-subj-badge').textContent = (q.subject || currentSubject() || 'DATABASE SYSTEMS').toUpperCase();
+    const diffStr = (q.difficulty || 'EASY').toUpperCase();
+    document.getElementById('hdr-diff').textContent = diffStr;
     const bloom = q.bloom_level || 'APPLY';
     document.getElementById('hdr-bloom').textContent = `BLOOM: ${bloom.toUpperCase()}`;
     
@@ -172,22 +236,22 @@ function renderQuestion(q, reason, mastery) {
     document.getElementById('q-num-label').textContent = `QUESTION ${qNum.toString().padStart(2, '0')}`;
     document.getElementById('hdr-progress-bar').style.width = `${Math.min(100, (qNum / SESSION_LENGTH) * 100)}%`;
     
-    document.getElementById('q-diff-label').textContent = (q.difficulty || 'MEDIUM').toUpperCase();
+    document.getElementById('q-diff-label').textContent = diffStr;
     document.getElementById('q-bloom-label').textContent = `BLOOM: ${bloom.toUpperCase()}`;
     
-    document.getElementById('q-text').textContent = q.question_text;
+    document.getElementById('q-text').textContent = q.question_text || q.text || '';
     
     // Adaptive Intelligence
     document.getElementById('ai-reason').textContent = reason || "Selected because it matches your learning path targets.";
-    document.getElementById('ai-diff').textContent = (q.difficulty || 'MEDIUM').toUpperCase();
-    // Use an approximate mastery if missing
-    document.getElementById('ai-mastery').textContent = (typeof mastery === 'number') ? `${Math.round(mastery * 100)}%` : '--%';
+    document.getElementById('ai-diff').textContent = diffStr;
+    // Show 0% rather than --% when mastery is 0
+    document.getElementById('ai-mastery').textContent = (typeof mastery === 'number') ? `${Math.round(mastery * 100)}%` : '0%';
     document.getElementById('ai-status').textContent = requestedTopic ? 'SELECTED' : ((typeof mastery === 'number' && mastery < 0.6) ? 'WEAK' : 'DUE');
     
     UI.optionsContainer.innerHTML = '';
     const letters = ['A', 'B', 'C', 'D'];
     
-    q.options.forEach((opt, idx) => {
+    optionsList.forEach((opt, idx) => {
         const card = document.createElement('div');
         card.className = 'opt-card';
         card.onclick = () => selectOption(card, opt);
@@ -309,7 +373,7 @@ function handleEvaluation(data) {
             
             UI.feedbackSuccess.classList.remove('hidden');
             document.getElementById('fb-success-text').textContent = data.feedback || "Correct!";
-            document.getElementById('fb-success-exp').textContent = data.explanation || "";
+            document.getElementById('fb-success-exp').textContent = data.explanation || "Well done! Your answer correctly reflects this concept.";
             
         } else {
             state.sessionIncorrect++;
@@ -321,13 +385,31 @@ function handleEvaluation(data) {
                 icon.textContent = '✗';
                 selectedCard.appendChild(icon);
             }
+
+            // Highlight the true correct option card so user clearly sees what was correct
+            const trueAnswer = data.correct_answer || data.correctAnswer || '';
+            if (trueAnswer) {
+                document.querySelectorAll('.opt-card').forEach(card => {
+                    const cardText = card.querySelector('span:last-child')?.textContent?.trim()?.toLowerCase() || '';
+                    if (cardText === trueAnswer.trim().toLowerCase()) {
+                        card.classList.remove('wrong', 'disabled');
+                        card.classList.add('correct');
+                        if (!card.querySelector('.opt-status-icon')) {
+                            const icon = document.createElement('span');
+                            icon.className = 'opt-status-icon';
+                            icon.textContent = '✓';
+                            card.appendChild(icon);
+                        }
+                    }
+                });
+            }
             
             UI.panelAdaptive.classList.add('hidden');
             UI.panelSocratic.classList.add('hidden');
             UI.feedbackFail.classList.remove('hidden');
             
-            document.getElementById('fb-fail-exp').textContent = data.explanation || data.feedback;
-            document.getElementById('fb-fail-answer').textContent = "Review the explanation above for details."; 
+            document.getElementById('fb-fail-exp').textContent = data.explanation || data.feedback || "Review the key concept.";
+            document.getElementById('fb-fail-answer').textContent = trueAnswer || "See explanation above."; 
         }
     }
     

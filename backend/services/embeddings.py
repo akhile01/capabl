@@ -2,6 +2,12 @@ import os
 import hashlib
 from typing import List
 
+try:
+    from langchain_google_genai import GoogleGenerativeAIEmbeddings
+except Exception:
+    class GoogleGenerativeAIEmbeddings:
+        pass
+
 # Simple deterministic embedding using SHA256 hash, returns 128‑dim float vector
 def _hash_to_vector(text: str, dim: int = 128) -> List[float]:
     digest = hashlib.sha256(text.encode('utf-8')).digest()

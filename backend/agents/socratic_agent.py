@@ -37,15 +37,40 @@ class SocraticEvaluationAgent:
         self.llm = self._get_llm()
         self.workflow = self._build_workflow()
 
-    def _get_llm(self) -> ChatGoogleGenerativeAI:
-        # Respect existing convention: look for GEMINI_API_KEY first, fallback to GOOGLE_API_KEY
-        api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
-        if not api_key:
-            raise ValueError("GEMINI_API_KEY or GOOGLE_API_KEY not found in environment variables.")
-        return ChatGoogleGenerativeAI(
-            model="gemini-3.6-flash", 
-            google_api_key=api_key
-        )
+    def _get_llm(self):
+        gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+        nova_key = os.getenv("NOVA_API_KEY") or os.getenv("AMAZON_NOVA_API_KEY")
+        preferred_provider = os.getenv("AI_PROVIDER", "").lower()
+
+        if preferred_provider != "nova" and gemini_key and gemini_key not in ["your_gemini_api_key_here", ""]:
+            model_name = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+            return ChatGoogleGenerativeAI(
+                model=model_name,
+                google_api_key=gemini_key,
+                max_retries=0,
+                timeout=5.0
+            )
+
+        if nova_key and nova_key not in ["your_nova_api_key_here", ""]:
+            model_name = os.getenv("NOVA_MODEL", "nova-pro-v1")
+            base_url = os.getenv("NOVA_BASE_URL", "https://api.nova.amazon.com/v1")
+            try:
+                from langchain_amazon_nova import ChatAmazonNova
+                return ChatAmazonNova(model=model_name, api_key=nova_key, base_url=base_url)
+            except Exception:
+                from langchain_openai import ChatOpenAI
+                return ChatOpenAI(model=model_name, api_key=nova_key, base_url=base_url)
+
+        if gemini_key and gemini_key not in ["your_gemini_api_key_here", ""]:
+            model_name = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+            return ChatGoogleGenerativeAI(
+                model=model_name,
+                google_api_key=gemini_key,
+                max_retries=0,
+                timeout=5.0
+            )
+
+        raise ValueError("Neither NOVA_API_KEY nor GEMINI_API_KEY found in environment variables.")
 
     # ==========================================
     # NODE 1: EVALUATE THE ANSWER
@@ -103,9 +128,13 @@ class SocraticEvaluationAgent:
             Provide a concise, encouraging final explanation of the correct concept.
             Ensure the explanation is highly accurate and easy to understand.
             """
-            response = self.llm.invoke(explanation_prompt)
-            raw_text = extract_text(response.content)
-            return {"feedback": raw_text.strip(), "status": "completed"}
+            try:
+                response = self.llm.invoke(explanation_prompt)
+                raw_text = extract_text(response.content)
+                feedback_text = raw_text.strip()
+            except Exception:
+                feedback_text = f"The correct answer is: {state.get('correct_answer')}."
+            return {"feedback": feedback_text, "status": "completed"}
         
         else:
             hint_prompt = f"""
@@ -123,9 +152,13 @@ class SocraticEvaluationAgent:
             4. Ask exactly ONE guiding question to help them figure it out.
             5. Keep your entire response to a maximum of 2 sentences.
             """
-            response = self.llm.invoke(hint_prompt)
-            raw_text = extract_text(response.content)
-            return {"feedback": raw_text.strip(), "status": "retry"}
+            try:
+                response = self.llm.invoke(hint_prompt)
+                raw_text = extract_text(response.content)
+                feedback_text = raw_text.strip()
+            except Exception:
+                feedback_text = "Not quite. Think carefully about the key requirements and constraints of this concept, and consider which option satisfies all criteria."
+            return {"feedback": feedback_text, "status": "retry"}
 
     # ==========================================
     # BUILD THE LANGGRAPH WORKFLOW

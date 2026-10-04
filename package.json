@@ -1,0 +1,10 @@
+{
+  "name": "adapted",
+  "version": "1.0.0",
+  "description": "AdaptEd - AI-Powered Adaptive Learning Platform",
+  "scripts": {
+    "dev": "powershell -Command \"if (Test-Path .venv\\Scripts\\python.exe) { .\\.venv\\Scripts\\python.exe main.py } else { py main.py }\"",
+    "start": "powershell -Command \"if (Test-Path .venv\\Scripts\\python.exe) { .\\.venv\\Scripts\\python.exe main.py } else { py main.py }\"",
+    "test": "powershell -Command \"if (Test-Path .venv\\Scripts\\python.exe) { .\\.venv\\Scripts\\python.exe -m pytest } else { py -m pytest }\""
+  }
+}

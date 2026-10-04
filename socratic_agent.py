@@ -8,12 +8,40 @@ load_dotenv()
 
 
 # ==========================================
-# 1. SETUP GEMINI AI
+# 1. SETUP MODEL (NOVA or GEMINI)
 # ==========================================
-llm = ChatGoogleGenerativeAI(
-    model="gemini-3.6-flash", 
-    google_api_key= os.getenv("GEMINI_API_KEY")
-)
+def _init_llm():
+    gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+    nova_key = os.getenv("NOVA_API_KEY") or os.getenv("AMAZON_NOVA_API_KEY")
+    preferred_provider = os.getenv("AI_PROVIDER", "").lower()
+
+    if preferred_provider != "nova" and gemini_key and gemini_key not in ["your_gemini_api_key_here", ""]:
+        model_name = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+        return ChatGoogleGenerativeAI(
+            model=model_name,
+            google_api_key=gemini_key
+        )
+
+    if nova_key and nova_key not in ["your_nova_api_key_here", ""]:
+        model_name = os.getenv("NOVA_MODEL", "nova-pro-v1")
+        base_url = os.getenv("NOVA_BASE_URL", "https://api.nova.amazon.com/v1")
+        try:
+            from langchain_amazon_nova import ChatAmazonNova
+            return ChatAmazonNova(model=model_name, api_key=nova_key, base_url=base_url)
+        except Exception:
+            from langchain_openai import ChatOpenAI
+            return ChatOpenAI(model=model_name, api_key=nova_key, base_url=base_url)
+
+    if gemini_key and gemini_key not in ["your_gemini_api_key_here", ""]:
+        model_name = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+        return ChatGoogleGenerativeAI(
+            model=model_name,
+            google_api_key=gemini_key
+        )
+
+    raise ValueError("Neither NOVA_API_KEY nor GEMINI_API_KEY found in environment variables.")
+
+llm = _init_llm()
 
 # ==========================================
 # 2. HELPER & STATE DEFINITION

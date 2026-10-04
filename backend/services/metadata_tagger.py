@@ -3,6 +3,12 @@ import os
 import re
 from typing import Dict
 
+try:
+    from langchain_google_genai import ChatGoogleGenerativeAI
+except Exception:
+    class ChatGoogleGenerativeAI:
+        pass
+
 # Simple fallback tagging – returns unknown for everything.
 # In a real system this would call an LLM, but for local dev we avoid heavy deps.
 

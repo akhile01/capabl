@@ -14,10 +14,10 @@
     <!-- Agent Status Strip -->
     <div class="agent-strip">
         <div class="agent-strip-inner">
-            <span class="agent-status active"><span class="indicator">●</span> ORCHESTRATOR ACTIVE</span>
-            <span class="agent-status"><span class="indicator">✓</span> QUESTION GEN READY</span>
-            <span class="agent-status"><span class="indicator">✓</span> SOCRATIC COACH READY</span>
-            <span class="agent-status"><span class="indicator">•</span> CONTENT INGEST IDLE</span>
+            <span class="agent-status active" id="strip-orchestrator"><span class="indicator">●</span> ORCHESTRATOR ACTIVE</span>
+            <span class="agent-status" id="strip-qgen"><span class="indicator">✓</span> QUESTION GEN READY</span>
+            <span class="agent-status" id="strip-socratic"><span class="indicator">✓</span> SOCRATIC COACH READY</span>
+            <span class="agent-status" id="strip-ingest"><span class="indicator">•</span> CONTENT INGEST IDLE</span>
         </div>
     </div>
 
@@ -152,9 +152,9 @@
                 <hr class="panel-divider">
                 
                 <div class="agent-statuses">
-                    <div class="agent-row"><span class="agent-name">ORCHESTRATOR</span> <span class="agent-state active">● ACTIVE</span></div>
-                    <div class="agent-row"><span class="agent-name">QUESTION GEN</span> <span class="agent-state">● READY</span></div>
-                    <div class="agent-row"><span class="agent-name">SOCRATIC COACH</span> <span class="agent-state">● READY</span></div>
+                    <div class="agent-row"><span class="agent-name">ORCHESTRATOR</span> <span class="agent-state active" id="panel-orchestrator-state">● ACTIVE</span></div>
+                    <div class="agent-row"><span class="agent-name">QUESTION GEN</span> <span class="agent-state" id="panel-qgen-state">● READY</span></div>
+                    <div class="agent-row"><span class="agent-name">SOCRATIC COACH</span> <span class="agent-state" id="panel-socratic-state">● READY</span></div>
                 </div>
                 
                 <hr class="panel-divider">
