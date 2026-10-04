@@ -49,13 +49,18 @@ def get_provider() -> str:
     explicit = (_env("LLM_PROVIDER") or "").lower()
     if explicit in ("nova", "openai", "gemini", "google"):
         return "gemini" if explicit == "google" else ("nova" if explicit == "openai" else explicit)
-    if _env("NOVA_API_KEY"):
+    # Prefer Gemini if key is provided and not a placeholder
+    gem_key = _env("GEMINI_API_KEY") or _env("GOOGLE_API_KEY")
+    if gem_key and gem_key != "your_gemini_api_key_here":
+        return "gemini"
+    nova_key = _env("NOVA_API_KEY")
+    if nova_key and nova_key != "your_nova_api_key_here":
         return "nova"
-    if _env("GEMINI_API_KEY") or _env("GOOGLE_API_KEY"):
+    if gem_key:
         return "gemini"
     raise ValueError(
-        "No LLM credentials found. Set NOVA_API_KEY (plus NOVA_BASE_URL) for the Nova API, "
-        "or GEMINI_API_KEY for Google Gemini, in your .env file."
+        "No LLM credentials found. Set GEMINI_API_KEY for Google Gemini, "
+        "or NOVA_API_KEY (plus NOVA_BASE_URL) for the Nova API, in your .env file."
     )
 
 
@@ -125,7 +130,7 @@ def get_chat_model(temperature: float = 0.2):
 
     api_key = _env("GEMINI_API_KEY") or _env("GOOGLE_API_KEY")
     return ChatGoogleGenerativeAI(
-        model=_env("GEMINI_MODEL", "gemini-3.6-flash"),
+        model=_env("GEMINI_MODEL", "gemini-3.5-flash"),
         google_api_key=api_key,
         temperature=temperature,
     )
@@ -137,7 +142,7 @@ def describe_model() -> str:
         provider = get_provider()
         if provider == "nova":
             return f"nova/{resolve_nova_model()}"
-        return f"gemini/{_env('GEMINI_MODEL', 'gemini-2.5-flash')}"
+        return f"gemini/{_env('GEMINI_MODEL', 'gemini-3.5-flash')}"
     except Exception as e:
         return f"unconfigured ({e})"
 

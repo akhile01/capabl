@@ -257,6 +257,14 @@ class QuestionGenerationAgent:
         else:
             context_str, docs = self._retrieve_context(topic)
 
+        if not context_str.strip():
+            context_str = (
+                f"Subject Curriculum Grounding: Database Systems\n"
+                f"Topic: {topic}\n"
+                f"Core Academic Knowledge: Standard curriculum principles, definitions, syntax, "
+                f"integrity rules, relational algebra, constraints, keys, operations, and foundational theory of {topic}."
+            )
+
         prompt_val = GENERATION_PROMPT.format(
             context=context_str,
             topic=topic,
