@@ -1,7 +1,7 @@
 import os
 import glob
 
-frontend_dir = r"c:\Users\Rajeev\capable agent b\capabl\frontend"
+frontend_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "frontend")
 html_files = glob.glob(os.path.join(frontend_dir, "*.html"))
 
 head_tags = '<link rel="stylesheet" href="/static/theme.css">\n    <script src="/static/theme.js"></script>\n'
