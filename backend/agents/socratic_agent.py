@@ -2,9 +2,10 @@ import json
 import os
 from typing import TypedDict, Dict, Any
 
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.graph import StateGraph, END
 from dotenv import load_dotenv
+
+from backend.services.llm import get_chat_model
 
 load_dotenv()
 
@@ -34,43 +35,22 @@ class SocraticEvaluationAgent:
     """Agent in charge of evaluating student answers using a Socratic hint-first loop."""
     
     def __init__(self):
-        self.llm = self._get_llm()
+        self._llm = None  # created lazily on first use (see backend/services/llm.py)
         self.workflow = self._build_workflow()
 
+    @property
+    def llm(self):
+        if self._llm is None:
+            self._llm = self._get_llm()
+        return self._llm
+
+    @llm.setter
+    def llm(self, value):
+        self._llm = value
+
     def _get_llm(self):
-        gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
-        nova_key = os.getenv("NOVA_API_KEY") or os.getenv("AMAZON_NOVA_API_KEY")
-        preferred_provider = os.getenv("AI_PROVIDER", "").lower()
-
-        if preferred_provider != "nova" and gemini_key and gemini_key not in ["your_gemini_api_key_here", ""]:
-            model_name = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
-            return ChatGoogleGenerativeAI(
-                model=model_name,
-                google_api_key=gemini_key,
-                max_retries=0,
-                timeout=5.0
-            )
-
-        if nova_key and nova_key not in ["your_nova_api_key_here", ""]:
-            model_name = os.getenv("NOVA_MODEL", "nova-pro-v1")
-            base_url = os.getenv("NOVA_BASE_URL", "https://api.nova.amazon.com/v1")
-            try:
-                from langchain_amazon_nova import ChatAmazonNova
-                return ChatAmazonNova(model=model_name, api_key=nova_key, base_url=base_url)
-            except Exception:
-                from langchain_openai import ChatOpenAI
-                return ChatOpenAI(model=model_name, api_key=nova_key, base_url=base_url)
-
-        if gemini_key and gemini_key not in ["your_gemini_api_key_here", ""]:
-            model_name = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
-            return ChatGoogleGenerativeAI(
-                model=model_name,
-                google_api_key=gemini_key,
-                max_retries=0,
-                timeout=5.0
-            )
-
-        raise ValueError("Neither NOVA_API_KEY nor GEMINI_API_KEY found in environment variables.")
+        # Provider (Nova API / Gemini) and model come from .env; see backend/services/llm.py
+        return get_chat_model(temperature=0.3)
 
     # ==========================================
     # NODE 1: EVALUATE THE ANSWER

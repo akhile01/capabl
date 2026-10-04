@@ -149,14 +149,19 @@ capable-orchetration/
    ```bash
    cp .env.example .env
    ```
-   Update `.env` with your Google Gemini API key:
+   Update `.env` with your LLM credentials. AdaptEd talks to any OpenAI-compatible
+   gateway (Nova API) or to Google Gemini directly:
    ```ini
-   GEMINI_API_KEY=your_gemini_api_key_here
-   DATABASE_URL=sqlite:///database.db
-   PORT=8000
-   HOST=0.0.0.0
-   DEBUG=True
+   # Nova API (OpenAI-compatible gateway)
+   NOVA_API_KEY=your_nova_api_key_here
+   NOVA_BASE_URL=https://api.novaapi.ai/v1   # from your Nova dashboard
+   NOVA_MODEL=                               # empty = auto-pick the best model listed by the gateway
+
+   # or Google Gemini
+   # GEMINI_API_KEY=your_gemini_api_key_here
    ```
+   Run `python list_models.py` to see the models your gateway offers and which one
+   will be auto-selected.
 
 ---
 

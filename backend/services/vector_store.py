@@ -1,53 +1,21 @@
+"""Lightweight persistent document store used for retrieval.
+
+The original stub re-created an empty in-memory store on every call, so chunks
+ingested from a PDF were discarded immediately and question generation always
+reported "No context found". This implementation keeps one shared store per
+process, persists it to ``database/chromadb/store.json`` so uploads survive a
+server restart, and ranks chunks by keyword overlap with the query.
+"""
+import json
 import os
-from typing import List
+import re
+import threading
+from typing import Dict, List, Optional, Tuple
+
 from dotenv import load_dotenv
-# Minimal stub classes to avoid heavy dependencies
-class Chroma:
-    def __init__(self, collection_name: str, embedding_function, persist_directory: str):
-        self.collection_name = collection_name
-        self.embedding_function = embedding_function
-        self.persist_directory = persist_directory
-        self._docs = []
-        self._id_index = {}
-
-    def add_documents(self, docs, ids=None):
-        if ids is None:
-            ids = []
-        for doc, doc_id in zip(docs, ids):
-            self._tags = getattr(doc, "metadata", {})
-            self._docs.append(doc)
-            if doc_id:
-                self._id_index[doc_id] = doc
-
-    def get(self, ids):
-        found = [doc_id for doc_id in ids if doc_id in self._id_index]
-        return {"ids": found}
-
-    def similarity_search_with_score(self, query, k=5):
-        results = []
-        for doc in self._docs:
-            if query.lower() in getattr(doc, "page_content", "").lower():
-                results.append((doc, 0.0))
-        if len(results) < k:
-            for doc in self._docs:
-                if (doc, 0.0) not in results:
-                    results.append((doc, 1.0))
-                    if len(results) >= k:
-                        break
-        return results[:k]
-
-    def delete_collection(self):
-        self._docs.clear()
-        self._id_index.clear()
-
-class Document:
-    def __init__(self, page_content: str, metadata: dict = None):
-        self.page_content = page_content
-        self.metadata = metadata or {}
+from langchain_core.documents import Document
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
-from backend.services.embeddings import get_embeddings_model
 
-# Load environment variables
 load_dotenv()
 
 # Store database in capabl/database/chromadb
@@ -58,16 +26,108 @@ DB_DIR = os.path.abspath(
         "chromadb",
     )
 )
+STORE_FILE = os.path.join(DB_DIR, "store.json")
+
+_WORD = re.compile(r"[a-z0-9]+")
+_STOPWORDS = {
+    "the", "a", "an", "and", "or", "of", "to", "in", "on", "for", "is", "are", "be",
+    "with", "by", "as", "at", "from", "that", "this", "it", "its", "into", "than",
+}
 
 
-def get_vector_store() -> Chroma:
-    """Initializes and returns the Chroma vector store instance."""
-    embeddings = get_embeddings_model()
-    return Chroma(
-        collection_name="adapted_knowledge",
-        embedding_function=embeddings,
-        persist_directory=DB_DIR,
-    )
+def _tokens(text: str) -> List[str]:
+    return [t for t in _WORD.findall((text or "").lower()) if t not in _STOPWORDS]
+
+
+class DocumentStore:
+    """Process-wide, file-backed collection of text chunks."""
+
+    def __init__(self, collection_name: str, persist_directory: str):
+        self.collection_name = collection_name
+        self.persist_directory = persist_directory
+        self._path = os.path.join(persist_directory, "store.json")
+        self._lock = threading.RLock()
+        self._docs: Dict[str, Dict] = {}
+        self._load()
+
+    # ---- persistence -----------------------------------------------------
+    def _load(self) -> None:
+        if not os.path.exists(self._path):
+            return
+        try:
+            with open(self._path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            self._docs = {d["id"]: d for d in data.get("documents", []) if "id" in d}
+        except Exception as e:  # corrupt file: start empty rather than crash the app
+            print(f"Warning: could not read {self._path}: {e}")
+            self._docs = {}
+
+    def _save(self) -> None:
+        os.makedirs(self.persist_directory, exist_ok=True)
+        tmp = self._path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump({"collection": self.collection_name, "documents": list(self._docs.values())}, f)
+        os.replace(tmp, self._path)
+
+    # ---- API used by the agents ----------------------------------------
+    def add_documents(self, docs: List[Document], ids: Optional[List[str]] = None) -> None:
+        ids = ids or [None] * len(docs)
+        with self._lock:
+            for i, (doc, doc_id) in enumerate(zip(docs, ids)):
+                metadata = dict(getattr(doc, "metadata", {}) or {})
+                doc_id = doc_id or metadata.get("chunk_id") or f"chunk_{len(self._docs) + i}"
+                metadata.setdefault("chunk_id", doc_id)
+                self._docs[doc_id] = {"id": doc_id, "page_content": doc.page_content, "metadata": metadata}
+            self._save()
+
+    def get(self, ids: List[str]) -> Dict[str, List[str]]:
+        with self._lock:
+            return {"ids": [i for i in ids if i in self._docs]}
+
+    def count(self) -> int:
+        return len(self._docs)
+
+    def similarity_search_with_score(self, query: str, k: int = 5) -> List[Tuple[Document, float]]:
+        """Rank chunks by keyword overlap. Score is a distance: 0 = best match."""
+        q_tokens = set(_tokens(query))
+        q_lower = (query or "").lower().strip()
+        scored = []
+        with self._lock:
+            for d in self._docs.values():
+                content = d["page_content"]
+                meta = d.get("metadata", {})
+                c_tokens = set(_tokens(content)) | set(_tokens(str(meta.get("topic", ""))))
+                overlap = len(q_tokens & c_tokens) / len(q_tokens) if q_tokens else 0.0
+                if q_lower and q_lower in content.lower():
+                    overlap = max(overlap, 1.0)
+                scored.append((1.0 - overlap, d))
+        scored.sort(key=lambda s: s[0])
+        results = []
+        for distance, d in scored[:k]:
+            results.append((Document(page_content=d["page_content"], metadata=dict(d["metadata"])), distance))
+        return results
+
+    def delete_collection(self) -> None:
+        with self._lock:
+            self._docs.clear()
+            if os.path.exists(self._path):
+                os.remove(self._path)
+
+
+# Backwards-compatible alias: older code and tests refer to the store as "Chroma".
+Chroma = DocumentStore
+
+_STORE: Optional[DocumentStore] = None
+_STORE_LOCK = threading.Lock()
+
+
+def get_vector_store() -> DocumentStore:
+    """Returns the shared document store (created on first use)."""
+    global _STORE
+    with _STORE_LOCK:
+        if _STORE is None:
+            _STORE = DocumentStore(collection_name="adapted_knowledge", persist_directory=DB_DIR)
+        return _STORE
 
 
 @retry(
@@ -76,26 +136,18 @@ def get_vector_store() -> Chroma:
     retry=retry_if_exception_type(Exception),
     reraise=True,
 )
-def _add_batch_with_retry(vector_store: Chroma, batch_docs: List[Document], batch_ids: List[str]) -> None:
-    """Helper function to add a single batch of documents to Chroma with retry logic."""
+def _add_batch_with_retry(vector_store: DocumentStore, batch_docs: List[Document], batch_ids: List[str]) -> None:
+    """Helper function to add a single batch of documents with retry logic."""
     vector_store.add_documents(batch_docs, ids=batch_ids)
 
 
 def add_documents(documents: List[Document]) -> None:
-    """Adds a list of Document objects to the Chroma vector store.
-
-    Checks for existing IDs to avoid re-embedding. Remaining documents are
-    embedded and added in batches with retry logic.
-
-    Args:
-        documents: A list of Document objects.
-    """
+    """Adds a list of Document objects to the store, skipping chunks already present."""
     if not documents:
         return
 
     vector_store = get_vector_store()
 
-    # Extract unique IDs from document metadata
     ids = []
     for i, doc in enumerate(documents):
         chunk_id = doc.metadata.get("chunk_id")
@@ -104,7 +156,6 @@ def add_documents(documents: List[Document]) -> None:
             doc.metadata["chunk_id"] = chunk_id
         ids.append(chunk_id)
 
-    # Filter out documents that already exist in Chroma
     existing_ids = set()
     try:
         existing = vector_store.get(ids=ids)
@@ -124,41 +175,23 @@ def add_documents(documents: List[Document]) -> None:
         print("All chunks already exist in vector store. Skipping ingestion.")
         return
 
-    print(
-        f"Adding {len(docs_to_add)} new chunks to ChromaDB (skipped {len(existing_ids)} already existing chunks)."
-    )
+    print(f"Adding {len(docs_to_add)} new chunks to the document store (skipped {len(existing_ids)} already existing chunks).")
 
-    # Configurable batch size
     batch_size = int(os.getenv("EMBEDDING_BATCH_SIZE", "20"))
-
-    # Add documents in batches with retry logic
     for j in range(0, len(docs_to_add), batch_size):
-        batch_docs = docs_to_add[j : j + batch_size]
-        batch_ids = ids_to_add[j : j + batch_size]
-        _add_batch_with_retry(vector_store, batch_docs, batch_ids)
+        _add_batch_with_retry(vector_store, docs_to_add[j : j + batch_size], ids_to_add[j : j + batch_size])
 
 
 def search(query: str, k: int = 5) -> List[Document]:
-    """Queries the Chroma vector store using similarity search.
-
-    Args:
-        query: The search string query.
-        k: The number of results to return.
-
-    Returns:
-        A list of matching Document objects.
-    """
+    """Returns the ``k`` chunks most relevant to ``query`` (empty list if nothing is ingested)."""
     vector_store = get_vector_store()
-    results_with_score = vector_store.similarity_search_with_score(query, k=k)
-    
     docs = []
-    for doc, score in results_with_score:
+    for doc, score in vector_store.similarity_search_with_score(query, k=k):
         doc.metadata["score"] = score
         docs.append(doc)
     return docs
 
 
 def delete_collection() -> None:
-    """Deletes the entire Chroma collection."""
-    vector_store = get_vector_store()
-    vector_store.delete_collection()
+    """Deletes every stored chunk."""
+    get_vector_store().delete_collection()

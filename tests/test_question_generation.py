@@ -12,7 +12,7 @@ from backend.model.question import Question, DifficultyLevel
 
 @pytest.fixture
 def agent():
-    with patch("backend.agents.question_generation.ChatGoogleGenerativeAI"):
+    with patch("backend.agents.question_generation.get_chat_model"):
         yield QuestionGenerationAgent()
 
 def test_deterministic_validation_valid(agent):
