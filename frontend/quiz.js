@@ -2,7 +2,7 @@
 // Re-declaring it here threw "Identifier 'API_BASE' has already been declared"
 // and prevented this whole script from running (no buttons worked).
 let studentId = localStorage.getItem('student_id') || 'default';
-const SESSION_LENGTH = 10;
+const SESSION_LENGTH = 5;
 const urlParams = new URLSearchParams(window.location.search);
 const requestedTopic = urlParams.get('topic');
 let sessionComplete = false;
@@ -128,9 +128,9 @@ async function initQuiz() {
 
 const loadingTexts = [
     "Analyzing your mastery...",
-    "Selecting the next topic...",
-    "Choosing difficulty...",
-    "Retrieving a grounded question...",
+    "Selecting the next level...",
+    "Matching adaptive difficulty...",
+    "Retrieving grounded question...",
     "Checking question quality..."
 ];
 let rotatorInterval;
@@ -183,13 +183,18 @@ async function fetchNextQuestion() {
     state.attemptCount = 1;
     
     try {
-        const params = new URLSearchParams({ subject: currentSubject() });
+        const qNum = state.questionsAnswered + 1;
+        const params = new URLSearchParams({
+            subject: currentSubject(),
+            q_num: qNum,
+            total_q: SESSION_LENGTH
+        });
         if (requestedTopic) params.set('topic', requestedTopic);
         const res = await fetch(`${API_BASE}/next_question/${studentId}?${params.toString()}`);
         const data = await res.json();
         
         if (res.ok && (data.status === 'success' || data.success === true)) {
-            renderQuestion(data.question, data.reason, data.mastery);
+            renderQuestion(data.question, data.reason, data.mastery, data.level, data.level_name);
         } else {
             const errorMsg = data.details || (typeof data.detail === 'string' ? data.detail : data.detail?.details) || data.error || data.message || 'The server could not provide a question.';
             showError(errorMsg);
@@ -202,7 +207,7 @@ async function fetchNextQuestion() {
     }
 }
 
-function renderQuestion(q, reason, mastery) {
+function renderQuestion(q, reason, mastery, level, levelName) {
     stopLoading();
     updateAgentStatuses('ready');
     UI.stateActive.classList.remove('hidden');
@@ -222,6 +227,10 @@ function renderQuestion(q, reason, mastery) {
     state.questionId = q.id;
     state.options = optionsList;
     
+    const qNum = state.questionsAnswered + 1;
+    const levelNum = level || q.level || Math.min(SESSION_LENGTH, qNum);
+    const levelTitle = levelName || q.level_name || `Level ${levelNum}`;
+
     // Header info
     const topicName = q.topic || 'Database Systems';
     document.getElementById('hdr-subject').textContent = topicName;
@@ -231,9 +240,8 @@ function renderQuestion(q, reason, mastery) {
     const bloom = q.bloom_level || 'APPLY';
     document.getElementById('hdr-bloom').textContent = `BLOOM: ${bloom.toUpperCase()}`;
     
-    const qNum = state.questionsAnswered + 1;
-    document.getElementById('hdr-progress-text').textContent = `Q ${qNum.toString().padStart(2, '0')} / ${SESSION_LENGTH}`;
-    document.getElementById('q-num-label').textContent = `QUESTION ${qNum.toString().padStart(2, '0')}`;
+    document.getElementById('hdr-progress-text').textContent = `LEVEL ${levelNum} · Q ${qNum.toString().padStart(2, '0')} / ${SESSION_LENGTH.toString().padStart(2, '0')}`;
+    document.getElementById('q-num-label').textContent = `QUESTION ${qNum.toString().padStart(2, '0')} · LEVEL ${levelNum}`;
     document.getElementById('hdr-progress-bar').style.width = `${Math.min(100, (qNum / SESSION_LENGTH) * 100)}%`;
     
     document.getElementById('q-diff-label').textContent = diffStr;
@@ -242,11 +250,13 @@ function renderQuestion(q, reason, mastery) {
     document.getElementById('q-text').textContent = q.question_text || q.text || '';
     
     // Adaptive Intelligence
-    document.getElementById('ai-reason').textContent = reason || "Selected because it matches your learning path targets.";
-    document.getElementById('ai-diff').textContent = diffStr;
+    document.getElementById('ai-reason').textContent = reason || `Level ${levelNum} (${diffStr}) selected based on adaptive mastery.`;
+    document.getElementById('ai-diff').textContent = `${diffStr} (LVL ${levelNum})`;
+    document.getElementById('sess-count').textContent = `${qNum.toString().padStart(2, '0')} / ${SESSION_LENGTH.toString().padStart(2, '0')}`;
     // Show 0% rather than --% when mastery is 0
     document.getElementById('ai-mastery').textContent = (typeof mastery === 'number') ? `${Math.round(mastery * 100)}%` : '0%';
     document.getElementById('ai-status').textContent = requestedTopic ? 'SELECTED' : ((typeof mastery === 'number' && mastery < 0.6) ? 'WEAK' : 'DUE');
+
     
     UI.optionsContainer.innerHTML = '';
     const letters = ['A', 'B', 'C', 'D'];

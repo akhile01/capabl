@@ -40,7 +40,7 @@ class OrchestratorAgent:
         conn = get_db_connection()
         
         # 1. Due topics
-        now = datetime.datetime.now()
+        now = datetime.datetime.now().isoformat()
         due_rows = conn.execute("""
             SELECT topic, mastery_level FROM topic_mastery
             WHERE student_id = ? AND (LOWER(subject) = LOWER(?) OR LOWER(?) = 'unknown' OR LOWER(subject) = 'unknown')
@@ -81,16 +81,23 @@ class OrchestratorAgent:
         
         return revision_list
 
-    def get_next_question(self, student_id: str, subject: str = "Unknown", topic: Optional[str] = None) -> Dict[str, Any]:
+    def get_next_question(
+        self,
+        student_id: str,
+        subject: str = "Unknown",
+        topic: Optional[str] = None,
+        q_num: Optional[int] = None,
+        total_q: int = 5,
+    ) -> Dict[str, Any]:
         """
-        Determines the next topic and fetches/generates a question.
+        Determines the next topic and fetches/generates a question with 5-stage adaptive leveling.
         Priority:
         1. Explicit topic provided.
         2. Due topics.
         3. Weak topics.
         4. Default / available topic.
         """
-        logger.info(f"[Adaptive Practice] Request started - student_id={student_id}, subject={subject}, topic={topic}")
+        logger.info(f"[Adaptive Practice] Request started - student_id={student_id}, subject={subject}, topic={topic}, q_num={q_num}/{total_q}")
 
         # Ensure student exists
         student = self._get_student(student_id)
@@ -133,15 +140,56 @@ class OrchestratorAgent:
             
         logger.info(f"[Adaptive Practice] Mastery loaded - topic={selected_topic}, mastery={mastery:.2f}")
 
-        # Determine difficulty based on mastery
-        if mastery < 0.4:
-            difficulty = "easy"
-        elif mastery < 0.8:
-            difficulty = "medium"
+        # 5-Stage Adaptive Level and Difficulty Progression
+        level_num = 1
+        level_name = "Foundational"
+        target_bloom = "understand"
+
+        if q_num is not None:
+            curr_q = max(1, min(total_q, int(q_num)))
+            if curr_q == 1:
+                level_num = 1
+                level_name = "Foundational"
+                difficulty = "easy"
+                target_bloom = "remember"
+            elif curr_q == 2:
+                level_num = 2
+                level_name = "Core Concept"
+                difficulty = "easy" if mastery < 0.35 else "medium"
+                target_bloom = "understand"
+            elif curr_q == 3:
+                level_num = 3
+                level_name = "Application"
+                difficulty = "medium"
+                target_bloom = "apply"
+            elif curr_q == 4:
+                level_num = 4
+                level_name = "Analytical"
+                difficulty = "medium" if mastery < 0.65 else "hard"
+                target_bloom = "analyze"
+            else:
+                level_num = 5
+                level_name = "Advanced Challenge"
+                difficulty = "hard"
+                target_bloom = "evaluate"
         else:
-            difficulty = "hard"
+            if mastery < 0.35:
+                difficulty = "easy"
+                level_num = 1
+                level_name = "Foundational"
+                target_bloom = "remember"
+            elif mastery < 0.70:
+                difficulty = "medium"
+                level_num = 3
+                level_name = "Application"
+                target_bloom = "apply"
+            else:
+                difficulty = "hard"
+                level_num = 5
+                level_name = "Advanced Challenge"
+                target_bloom = "evaluate"
             
-        logger.info(f"[Adaptive Practice] Difficulty selected - {difficulty}")
+        logger.info(f"[Adaptive Practice] Level {level_num} ({level_name}) selected with difficulty={difficulty}")
 
         # Generate or fetch from cache
         conn = get_db_connection()
@@ -158,18 +206,26 @@ class OrchestratorAgent:
         if cached:
             try:
                 question_dict = json.loads(cached["question_data"])
-                q_id = cached["id"]
-                question_dict["id"] = q_id
-                logger.info(f"[Question Generator] Reusing cached question - id={q_id}")
+                q_text = question_dict.get("question_text") or question_dict.get("text") or ""
+                opts = question_dict.get("options") or []
+                # Guard against stubs, dummy test questions, or malformed cache entries
+                if len(q_text.strip()) < 10 or len(opts) < 2 or all(len(str(o).strip()) <= 1 for o in opts):
+                    logger.warning(f"Cached question {cached['id']} is a stub or malformed ('{q_text}'). Discarding and generating fresh.")
+                    cached = None
+                else:
+                    q_id = cached["id"]
+                    question_dict["id"] = q_id
+                    logger.info(f"[Question Generator] Reusing cached question - id={q_id}")
             except Exception as e:
                 logger.warning(f"Failed to parse cached question data: {e}")
                 cached = None
 
         if not cached:
-            # Fetch ALL previously generated questions for this topic to avoid regenerating them
+            # Fetch previously generated questions for this topic (limit to last 5 for fast prompting)
             prior_rows = conn.execute("""
                 SELECT question_data FROM generated_questions 
                 WHERE LOWER(topic) = LOWER(?)
+                ORDER BY created_at DESC LIMIT 5
             """, (selected_topic,)).fetchall()
             
             prior_qs = []
@@ -182,14 +238,24 @@ class OrchestratorAgent:
 
             logger.info(f"[Adaptive Practice] Question history loaded - count={len(prior_qs)}")
 
-            # Generate new
-            result = self.question_agent.generate_questions(selected_topic, 1, difficulty, prior_questions=prior_qs)
+            # Generate new with target bloom level and difficulty
+            result = self.question_agent.generate_questions(selected_topic, 1, difficulty, bloom_level=target_bloom, prior_questions=prior_qs)
+
             if (result.get("status") == "success" or "questions" in result) and result.get("questions"):
                 q = result["questions"][0]
                 q_id = str(uuid.uuid4())
                 q.id = q_id
                 q.subject = resolved_subject
-                question_dict = q.dict()
+                if isinstance(q, Question):
+                    question_dict = q.model_dump()
+                elif hasattr(q, "dict") and callable(q.dict):
+                    question_dict = q.dict()
+                elif hasattr(q, "model_dump") and callable(q.model_dump):
+                    question_dict = q.model_dump()
+                elif isinstance(q, dict):
+                    question_dict = dict(q)
+                else:
+                    question_dict = vars(q)
                 question_dict["id"] = q_id
                 
                 # Cache it
@@ -227,10 +293,15 @@ class OrchestratorAgent:
         if "topic" not in question_dict or not question_dict["topic"]:
             question_dict["topic"] = selected_topic
         question_dict["difficulty"] = diff_val
+        question_dict["level"] = level_num
+        full_level_title = f"Level {level_num}: {level_name}"
+        question_dict["level_name"] = full_level_title
+        if "bloom_level" not in question_dict or not question_dict["bloom_level"]:
+            question_dict["bloom_level"] = target_bloom
         if "question_type" in question_dict and hasattr(question_dict["question_type"], "value"):
             question_dict["question_type"] = question_dict["question_type"].value
 
-        logger.info(f"[Question Generator] Question saved/returned - id={q_id}")
+        logger.info(f"[Question Generator] Question saved/returned - id={q_id}, level={level_num}")
         logger.info(f"[Adaptive Practice] Request completed - question_id={q_id}")
 
         return {
@@ -240,8 +311,11 @@ class OrchestratorAgent:
             "mastery": float(mastery),
             "difficulty": diff_val,
             "topic": selected_topic,
-            "reason": f"Selected {selected_topic} ({diff_val}) due to mastery={mastery:.2f}."
+            "level": level_num,
+            "level_name": full_level_title,
+            "reason": f"Level {level_num} ({level_name}) selected with {diff_val.upper()} difficulty for question {q_num or 1} of {total_q} (mastery: {mastery * 100:.0f}%)."
         }
+
 
     def _is_mcq_correct(self, student_answer: str, correct_answer: str, options: list = None, correct_index: int = None) -> bool:
         s = str(student_answer).strip().lower()
@@ -402,7 +476,7 @@ class OrchestratorAgent:
             repetition = 1 if is_correct else 0
             easiness = 2.6 if is_correct else 2.0
             
-            next_date = datetime.datetime.now() + datetime.timedelta(days=interval)
+            next_date = (datetime.datetime.now() + datetime.timedelta(days=interval)).isoformat()
             conn.execute("""
                 INSERT INTO spaced_repetition (student_id, subject, topic, interval, repetition, easiness, next_review_date)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -429,7 +503,7 @@ class OrchestratorAgent:
                 else:
                     interval = interval * easiness
                     
-            next_date = datetime.datetime.now() + datetime.timedelta(days=interval)
+            next_date = (datetime.datetime.now() + datetime.timedelta(days=interval)).isoformat()
             
             conn.execute("""
                 UPDATE spaced_repetition 
@@ -437,10 +511,27 @@ class OrchestratorAgent:
                 WHERE student_id = ? AND subject = ? AND topic = ?
             """, (interval, repetition, easiness, next_date, student_id, subject, topic))
 
-    def get_analytics(self, student_id: str, subject: str = "Unknown"):
+    def get_analytics(self, student_id: str, subject: Optional[str] = None):
         conn = get_db_connection()
-        mastery = conn.execute("SELECT topic, mastery_level FROM topic_mastery WHERE student_id = ? AND subject = ?", (student_id, subject)).fetchall()
-        logs = conn.execute("SELECT topic, correct, difficulty, hint_used, timestamp FROM performance_logs WHERE student_id = ? AND subject = ? ORDER BY timestamp DESC LIMIT 50", (student_id, subject)).fetchall()
+        if subject and subject.strip() and subject.strip().lower() not in ("unknown", "all", "none", "", "all subjects"):
+            subj_clean = subject.strip()
+            mastery = conn.execute(
+                "SELECT topic, mastery_level, subject, updated_at FROM topic_mastery WHERE student_id = ? AND LOWER(subject) = LOWER(?) ORDER BY updated_at DESC",
+                (student_id, subj_clean)
+            ).fetchall()
+            logs = conn.execute(
+                "SELECT topic, correct, difficulty, hint_used, timestamp, subject FROM performance_logs WHERE student_id = ? AND LOWER(subject) = LOWER(?) ORDER BY timestamp DESC LIMIT 50",
+                (student_id, subj_clean)
+            ).fetchall()
+        else:
+            mastery = conn.execute(
+                "SELECT topic, mastery_level, subject, updated_at FROM topic_mastery WHERE student_id = ? ORDER BY updated_at DESC",
+                (student_id,)
+            ).fetchall()
+            logs = conn.execute(
+                "SELECT topic, correct, difficulty, hint_used, timestamp, subject FROM performance_logs WHERE student_id = ? ORDER BY timestamp DESC LIMIT 50",
+                (student_id,)
+            ).fetchall()
         conn.close()
         return {
             "mastery": [dict(m) for m in mastery],

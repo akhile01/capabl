@@ -25,14 +25,15 @@ logger = logging.getLogger(__name__)
 
 T = TypeVar("T", bound=BaseModel)
 
-DEFAULT_NOVA_BASE_URL = "https://api.novaapi.ai/v1"
+DEFAULT_NOVA_BASE_URL = "https://cleanapis.com/v1"
+DEFAULT_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)"
 
 # Ordered "best first". Matched case-insensitively as substrings of the model id.
 DEFAULT_MODEL_PREFERENCES = [
-    "claude-opus-4", "claude-opus", "gpt-5", "o3-pro", "o3",
-    "claude-sonnet-4", "gemini-3", "gemini-2.5-pro", "gpt-4.1",
-    "claude-sonnet", "deepseek-r1", "gpt-4o", "gemini-2.5-flash",
-    "deepseek", "llama", "qwen", "mistral",
+    "claude-sonnet-5", "claude-3-5-sonnet", "claude-sonnet", "claude-3-7-sonnet",
+    "claude-opus-5", "claude-opus-4.8", "claude-fable-5.1",
+    "gpt-5.6", "gpt-5.5", "gemini-3.7-flash", "deepseek-v4",
+    "qwen", "glm", "llama",
 ]
 
 # Never auto-pick these: they are not chat models.
@@ -47,25 +48,33 @@ def _env(name: str, default: Optional[str] = None) -> Optional[str]:
 
 def get_provider() -> str:
     explicit = (_env("LLM_PROVIDER") or "").lower()
-    if explicit in ("nova", "openai", "gemini", "google"):
+    if explicit in ("clean", "nova", "openai", "gemini", "google", "claude"):
+        if explicit in ("clean", "claude"):
+            return "clean"
         return "gemini" if explicit == "google" else ("nova" if explicit == "openai" else explicit)
+    # Check for clean api key or cc_ key format
+    clean_key = _env("CLEAN_API_KEY")
+    if clean_key and clean_key != "your_clean_api_key_here":
+        return "clean"
+    nova_key = _env("NOVA_API_KEY")
+    if nova_key and nova_key.startswith("cc_"):
+        return "clean"
     # Prefer Gemini if key is provided and not a placeholder
     gem_key = _env("GEMINI_API_KEY") or _env("GOOGLE_API_KEY")
     if gem_key and gem_key != "your_gemini_api_key_here":
         return "gemini"
-    nova_key = _env("NOVA_API_KEY")
     if nova_key and nova_key != "your_nova_api_key_here":
         return "nova"
     if gem_key:
         return "gemini"
     raise ValueError(
-        "No LLM credentials found. Set GEMINI_API_KEY for Google Gemini, "
-        "or NOVA_API_KEY (plus NOVA_BASE_URL) for the Nova API, in your .env file."
+        "No LLM credentials found. Set CLEAN_API_KEY (plus CLEAN_BASE_URL), "
+        "NOVA_API_KEY, or GEMINI_API_KEY in your .env file."
     )
 
 
 def model_preferences() -> List[str]:
-    custom = _env("NOVA_MODEL_PREFERENCES")
+    custom = _env("CLEAN_MODEL_PREFERENCES") or _env("NOVA_MODEL_PREFERENCES")
     if custom:
         return [p.strip().lower() for p in custom.split(",") if p.strip()]
     return DEFAULT_MODEL_PREFERENCES
@@ -83,44 +92,57 @@ def choose_best_model(model_ids: List[str], preferences: Optional[List[str]] = N
 
 
 def list_nova_models() -> List[str]:
-    """Return the model ids the configured Nova gateway exposes."""
+    """Return the model ids the configured gateway exposes."""
     from openai import OpenAI
 
-    client = OpenAI(api_key=_env("NOVA_API_KEY"), base_url=_env("NOVA_BASE_URL", DEFAULT_NOVA_BASE_URL))
+    api_key = _env("CLEAN_API_KEY") or _env("NOVA_API_KEY")
+    base_url = _env("CLEAN_BASE_URL") or _env("NOVA_BASE_URL", DEFAULT_NOVA_BASE_URL)
+    client = OpenAI(
+        api_key=api_key,
+        base_url=base_url,
+        default_headers={"User-Agent": DEFAULT_USER_AGENT},
+    )
     return sorted(m.id for m in client.models.list())
 
 
 @lru_cache(maxsize=1)
 def resolve_nova_model() -> str:
-    """``NOVA_MODEL`` if set, otherwise the best model the gateway lists."""
-    configured = _env("NOVA_MODEL")
+    """Configured model if set, otherwise the best model the gateway lists."""
+    configured = _env("CLEAN_MODEL") or _env("NOVA_MODEL")
     if configured:
         return configured
+    base_url = _env("CLEAN_BASE_URL") or _env("NOVA_BASE_URL", DEFAULT_NOVA_BASE_URL)
     try:
         models = list_nova_models()
-    except Exception as e:  # network/auth problem: fail loudly with a useful message
-        raise ValueError(
-            "NOVA_MODEL is not set and the model list could not be fetched from "
-            f"{_env('NOVA_BASE_URL', DEFAULT_NOVA_BASE_URL)}: {e}. "
-            "Set NOVA_MODEL in .env (run `python list_models.py` to see the options)."
-        ) from e
+    except Exception as e:
+        # Fallback to default Sonnet model if listing models fails
+        logger.warning(
+            "Model list could not be fetched from %s (%s). Falling back to claude-sonnet-5",
+            base_url, e
+        )
+        return "claude-sonnet-5"
     chosen = choose_best_model(models)
     if not chosen:
-        raise ValueError("The Nova gateway returned no chat models. Set NOVA_MODEL explicitly in .env.")
-    logger.info("Nova API: auto-selected model %s (from %d available)", chosen, len(models))
+        return "claude-sonnet-5"
+    logger.info("Gateway: auto-selected model %s (from %d available)", chosen, len(models))
     return chosen
 
 
 def get_chat_model(temperature: float = 0.2):
     """Build a LangChain chat model for the configured provider."""
     provider = get_provider()
-    if provider == "nova":
+    if provider in ("clean", "nova"):
         from langchain_openai import ChatOpenAI
 
+        api_key = _env("CLEAN_API_KEY") or _env("NOVA_API_KEY")
+        base_url = _env("CLEAN_BASE_URL") or _env("NOVA_BASE_URL", DEFAULT_NOVA_BASE_URL)
+        model = _env("CLEAN_MODEL") or _env("NOVA_MODEL") or resolve_nova_model()
+
         return ChatOpenAI(
-            model=resolve_nova_model(),
-            api_key=_env("NOVA_API_KEY"),
-            base_url=_env("NOVA_BASE_URL", DEFAULT_NOVA_BASE_URL),
+            model=model,
+            api_key=api_key,
+            base_url=base_url,
+            default_headers={"User-Agent": DEFAULT_USER_AGENT},
             temperature=temperature,
             timeout=float(_env("LLM_TIMEOUT_SECONDS", "120")),
             max_retries=2,
@@ -140,9 +162,12 @@ def describe_model() -> str:
     """Human-readable 'provider/model' string for logs and the UI."""
     try:
         provider = get_provider()
-        if provider == "nova":
-            return f"nova/{resolve_nova_model()}"
+        if provider in ("clean", "nova"):
+            model = _env("CLEAN_MODEL") or _env("NOVA_MODEL") or resolve_nova_model()
+            return f"{provider}/{model}"
         return f"gemini/{_env('GEMINI_MODEL', 'gemini-3.5-flash')}"
+    except Exception as e:
+        return f"unconfigured ({e})"
     except Exception as e:
         return f"unconfigured ({e})"
 

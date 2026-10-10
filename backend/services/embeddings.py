@@ -26,8 +26,19 @@ class DummyEmbeddings:
     def embed_query(self, text: str) -> List[float]:
         return _hash_to_vector(text)
 
-def get_embeddings_model() -> DummyEmbeddings:
-    """Placeholder embeddings model that returns deterministic vectors."""
+def get_embeddings_model():
+    """Initializes and returns the Google Generative AI embeddings model if an API key is available,
+    otherwise falls back to deterministic dummy embeddings for offline development.
+    """
+    api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+    if api_key and api_key != "your_gemini_api_key_here":
+        try:
+            return GoogleGenerativeAIEmbeddings(
+                model=os.getenv("GEMINI_EMBEDDING_MODEL", "models/gemini-embedding-001"),
+                google_api_key=api_key,
+            )
+        except Exception:
+            pass
     return DummyEmbeddings()
 
 def embed_documents(texts: List[str]) -> List[List[float]]:
@@ -37,3 +48,4 @@ def embed_documents(texts: List[str]) -> List[List[float]]:
 def embed_query(text: str) -> List[float]:
     model = get_embeddings_model()
     return model.embed_query(text)
+

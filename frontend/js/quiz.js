@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (!API.checkAuth()) return;
   renderNav();
   
-  if (sessionLog.length >= 10) {
+  if (sessionLog.length >= 5) {
     window.location.href = '/quiz/summary';
     return;
   }
@@ -114,7 +114,7 @@ function renderQuestion(data) {
   
   document.getElementById('topic-badge').textContent = q.topic;
   document.getElementById('difficulty-badge').textContent = q.difficulty;
-  document.getElementById('q-counter').textContent = `Q ${sessionLog.length + 1} / 10`;
+  document.getElementById('q-counter').textContent = `Q ${sessionLog.length + 1} / 5`;
   document.getElementById('attempt-counter').textContent = `Attempt ${attemptCount} of 3`;
   
   document.getElementById('reason-strip').textContent = data.reason || 'Selected based on your mastery.';
@@ -257,7 +257,7 @@ function handleFeedback(res) {
 }
 
 function goToNext() {
-  if (sessionLog.length >= 10) {
+  if (sessionLog.length >= 5) {
     window.location.href = '/quiz/summary';
   } else {
     // Remove specific topic filter to allow orchestrator to pick next

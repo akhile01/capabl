@@ -70,9 +70,10 @@ def _sanitize_error_msg(msg: str) -> str:
     return clean
 
 @app.get("/api/next_question/{student_id}")
-def get_next_question(student_id: str, subject: str = "Unknown", topic: Optional[str] = None):
+def get_next_question(student_id: str, subject: str = "Unknown", topic: Optional[str] = None, q_num: Optional[int] = None, total_q: int = 5):
     try:
-        result = orchestrator.get_next_question(student_id, subject, topic=topic)
+        result = orchestrator.get_next_question(student_id, subject, topic=topic, q_num=q_num, total_q=total_q)
+
         if result.get("status") == "error" or not result.get("success", True):
             err_msg = result.get("message") or "Failed to generate question"
             err_details = _sanitize_error_msg(result.get("details") or err_msg)
@@ -115,7 +116,7 @@ def submit_answer(student_id: str, submission: AnswerSubmit):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/analytics/{student_id}")
-def get_analytics(student_id: str, subject: str = "Unknown"):
+def get_analytics(student_id: str, subject: Optional[str] = None):
     try:
         return orchestrator.get_analytics(student_id, subject)
     except Exception as e:
@@ -262,12 +263,24 @@ def generate_questions(req: QuestionGenerate):
         for q in result.get("questions", []):
             import uuid
             q_id = str(uuid.uuid4())
+            if hasattr(q, "model_dump") and callable(q.model_dump):
+                try:
+                    q_data = q.model_dump()
+                except Exception:
+                    q_data = q.dict() if hasattr(q, "dict") else dict(q)
+            elif hasattr(q, "dict") and callable(q.dict):
+                q_data = q.dict()
+            elif isinstance(q, dict):
+                q_data = dict(q)
+            else:
+                q_data = vars(q)
             conn.execute("""
                 INSERT INTO generated_questions (id, subject, topic, difficulty, question_data)
                 VALUES (?, ?, ?, ?, ?)
-            """, (q_id, subject, req.topic, req.difficulty, json.dumps(q.dict())))
+            """, (q_id, subject, req.topic, req.difficulty, json.dumps(q_data)))
         conn.commit()
         conn.close()
+
         
         return {"status": "success", "generated_count": len(result.get("questions", []))}
     except Exception as e:

@@ -35,6 +35,9 @@ _STOPWORDS = {
 }
 
 
+from backend.services.embeddings import get_embeddings_model
+
+
 def _tokens(text: str) -> List[str]:
     return [t for t in _WORD.findall((text or "").lower()) if t not in _STOPWORDS]
 
@@ -42,13 +45,15 @@ def _tokens(text: str) -> List[str]:
 class DocumentStore:
     """Process-wide, file-backed collection of text chunks."""
 
-    def __init__(self, collection_name: str, persist_directory: str):
+    def __init__(self, collection_name: str, persist_directory: str, embedding_function=None):
         self.collection_name = collection_name
         self.persist_directory = persist_directory
+        self.embedding_function = embedding_function
         self._path = os.path.join(persist_directory, "store.json")
         self._lock = threading.RLock()
         self._docs: Dict[str, Dict] = {}
         self._load()
+
 
     # ---- persistence -----------------------------------------------------
     def _load(self) -> None:
@@ -122,11 +127,15 @@ _STORE_LOCK = threading.Lock()
 
 
 def get_vector_store() -> DocumentStore:
-    """Returns the shared document store (created on first use)."""
+    """Returns the shared document store (created on first use or reloaded if DB_DIR changed)."""
     global _STORE
     with _STORE_LOCK:
-        if _STORE is None:
-            _STORE = DocumentStore(collection_name="adapted_knowledge", persist_directory=DB_DIR)
+        if _STORE is None or _STORE.persist_directory != DB_DIR:
+            _STORE = DocumentStore(
+                collection_name="adapted_knowledge",
+                persist_directory=DB_DIR,
+                embedding_function=get_embeddings_model(),
+            )
         return _STORE
 
 
@@ -138,7 +147,12 @@ def get_vector_store() -> DocumentStore:
 )
 def _add_batch_with_retry(vector_store: DocumentStore, batch_docs: List[Document], batch_ids: List[str]) -> None:
     """Helper function to add a single batch of documents with retry logic."""
+    emb_model = getattr(vector_store, "embedding_function", None) or get_embeddings_model()
+    if emb_model and hasattr(emb_model, "embed_documents"):
+        texts = [doc.page_content for doc in batch_docs]
+        emb_model.embed_documents(texts)
     vector_store.add_documents(batch_docs, ids=batch_ids)
+
 
 
 def add_documents(documents: List[Document]) -> None:
@@ -193,5 +207,12 @@ def search(query: str, k: int = 5) -> List[Document]:
 
 
 def delete_collection() -> None:
-    """Deletes every stored chunk."""
-    get_vector_store().delete_collection()
+    """Deletes every stored chunk and resets the store."""
+    global _STORE
+    with _STORE_LOCK:
+        if _STORE is not None:
+            _STORE.delete_collection()
+            _STORE = None
+        else:
+            DocumentStore(collection_name="adapted_knowledge", persist_directory=DB_DIR).delete_collection()
+

@@ -84,12 +84,18 @@ class SocraticEvaluationAgent:
             raw_text = extract_text(response.content)
             
             try:
-                clean_json = raw_text.replace("```json", "").replace("```", "").strip()
-                parsed_result = json.loads(clean_json)
-                return {"is_correct": parsed_result["is_correct"]}
+                from backend.services.llm import extract_json
+                parsed_result = extract_json(raw_text)
+                return {"is_correct": bool(parsed_result.get("is_correct", False))}
             except Exception as e:
-                print(f"Parsing error: {e}")
-                return {"is_correct": False}
+                try:
+                    clean_json = raw_text.replace("```json", "").replace("```", "").strip()
+                    parsed_result = json.loads(clean_json)
+                    return {"is_correct": bool(parsed_result.get("is_correct", False))}
+                except Exception:
+                    print(f"Parsing error: {e}")
+                    return {"is_correct": False}
+
 
     # ==========================================
     # NODE 2: GENERATE HINT OR EXPLANATION
