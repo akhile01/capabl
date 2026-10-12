@@ -11,11 +11,27 @@ load_dotenv()
 # 1. SETUP MODEL (NOVA or GEMINI)
 # ==========================================
 def _init_llm():
-    gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
-    nova_key = os.getenv("NOVA_API_KEY") or os.getenv("AMAZON_NOVA_API_KEY")
-    preferred_provider = os.getenv("AI_PROVIDER", "").lower()
+    try:
+        from backend.services.llm import get_chat_model
+        return get_chat_model(temperature=0.3)
+    except Exception:
+        pass
 
-    if preferred_provider != "nova" and gemini_key and gemini_key not in ["your_gemini_api_key_here", ""]:
+    clean_key = os.getenv("CLEAN_API_KEY")
+    nova_key = os.getenv("NOVA_API_KEY") or os.getenv("AMAZON_NOVA_API_KEY")
+    gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+    preferred_provider = (os.getenv("LLM_PROVIDER") or os.getenv("AI_PROVIDER") or "").lower()
+
+    if clean_key or (nova_key and nova_key.startswith("cc_")):
+        from langchain_openai import ChatOpenAI
+        return ChatOpenAI(
+            model=os.getenv("CLEAN_MODEL", "claude-sonnet-5"),
+            api_key=clean_key or nova_key,
+            base_url=os.getenv("CLEAN_BASE_URL", "https://cleanapis.com/v1"),
+            temperature=0.3,
+        )
+
+    if preferred_provider not in ["nova", "clean"] and gemini_key and gemini_key not in ["your_gemini_api_key_here", ""]:
         model_name = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
         return ChatGoogleGenerativeAI(
             model=model_name,
@@ -23,14 +39,10 @@ def _init_llm():
         )
 
     if nova_key and nova_key not in ["your_nova_api_key_here", ""]:
-        model_name = os.getenv("NOVA_MODEL", "nova-pro-v1")
-        base_url = os.getenv("NOVA_BASE_URL", "https://api.nova.amazon.com/v1")
-        try:
-            from langchain_amazon_nova import ChatAmazonNova
-            return ChatAmazonNova(model=model_name, api_key=nova_key, base_url=base_url)
-        except Exception:
-            from langchain_openai import ChatOpenAI
-            return ChatOpenAI(model=model_name, api_key=nova_key, base_url=base_url)
+        model_name = os.getenv("NOVA_MODEL", "claude-sonnet-5")
+        base_url = os.getenv("NOVA_BASE_URL", "https://cleanapis.com/v1")
+        from langchain_openai import ChatOpenAI
+        return ChatOpenAI(model=model_name, api_key=nova_key, base_url=base_url)
 
     if gemini_key and gemini_key not in ["your_gemini_api_key_here", ""]:
         model_name = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
@@ -39,7 +51,7 @@ def _init_llm():
             google_api_key=gemini_key
         )
 
-    raise ValueError("Neither NOVA_API_KEY nor GEMINI_API_KEY found in environment variables.")
+    raise ValueError("Neither CLEAN_API_KEY, NOVA_API_KEY nor GEMINI_API_KEY found in environment variables.")
 
 llm = _init_llm()
 

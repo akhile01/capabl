@@ -66,7 +66,7 @@ def _sanitize_error_msg(msg: str) -> str:
     """Removes potential API keys or sensitive secrets from error messages."""
     if not msg:
         return "An internal generation error occurred."
-    clean = re.sub(r'(?:AIza[0-9A-Za-z-_]{35}|nova_sk_[0-9A-Za-z-_]{20,}|sk-[0-9A-Za-z]{20,})', '[REDACTED_KEY]', str(msg))
+    clean = re.sub(r'(?:AIza[0-9A-Za-z-_]{35}|nova_sk_[0-9A-Za-z-_]{20,}|sk-[0-9A-Za-z]{20,}|cc_[0-9A-Za-z]{20,})', '[REDACTED_KEY]', str(msg))
     return clean
 
 @app.get("/api/next_question/{student_id}")

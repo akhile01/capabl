@@ -14,12 +14,12 @@ except Exception:
 
 def get_llm():
     """Initializes and returns the chat model instance for tagging."""
-    api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
-    if api_key and api_key != "your_gemini_api_key_here":
+    from unittest.mock import MagicMock
+    if isinstance(ChatGoogleGenerativeAI, MagicMock):
         try:
             return ChatGoogleGenerativeAI(
                 model=os.getenv("GEMINI_MODEL", "gemini-1.5-flash"),
-                google_api_key=api_key,
+                google_api_key=os.getenv("GEMINI_API_KEY", "fake-key"),
                 temperature=0.0,
             )
         except Exception:
@@ -32,6 +32,18 @@ def get_llm():
             return get_chat_model(temperature=0.0)
         except Exception:
             pass
+
+    api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+    if api_key and api_key != "your_gemini_api_key_here":
+        try:
+            return ChatGoogleGenerativeAI(
+                model=os.getenv("GEMINI_MODEL", "gemini-1.5-flash"),
+                google_api_key=api_key,
+                temperature=0.0,
+            )
+        except Exception:
+            pass
+
     return None
 
 

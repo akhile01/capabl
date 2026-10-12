@@ -11,7 +11,11 @@ sys.path.append(
 load_dotenv()
 
 # Check for API key
-api_key = os.getenv("GEMINI_API_KEY")
+api_key = (
+    os.getenv("CLEAN_API_KEY")
+    or os.getenv("NOVA_API_KEY")
+    or os.getenv("GEMINI_API_KEY")
+)
 
 from agents.content_ingestion import ContentIngestionAgent
 
@@ -20,9 +24,15 @@ def main():
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-    if not api_key or api_key in ["PASTE_NEW_KEY_HERE", "your_gemini_api_key_here", ""]:
-        print("ERROR: GEMINI_API_KEY is not set to a valid key in environment variables.")
-        print("Please configure your .env file with your actual Gemini API key before running this script.")
+    if not api_key or api_key in [
+        "PASTE_NEW_KEY_HERE",
+        "your_clean_api_key_here",
+        "your_nova_api_key_here",
+        "your_gemini_api_key_here",
+        "",
+    ]:
+        print("ERROR: CLEAN_API_KEY (or NOVA_API_KEY / GEMINI_API_KEY) is not set to a valid key in environment variables.")
+        print("Please configure your .env file with your actual API key before running this script.")
         sys.exit(1)
 
     pdf_path = "data/uploads/UNIT-5.pdf"
