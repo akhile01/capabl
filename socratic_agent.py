@@ -17,7 +17,7 @@ def _init_llm():
     except Exception:
         pass
 
-    clean_key = os.getenv("CLEAN_API_KEY")
+    clean_key = os.getenv("CLEAN_API_KEY") or os.getenv("CLEAN_API")
     nova_key = os.getenv("NOVA_API_KEY") or os.getenv("AMAZON_NOVA_API_KEY")
     gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
     preferred_provider = (os.getenv("LLM_PROVIDER") or os.getenv("AI_PROVIDER") or "").lower()

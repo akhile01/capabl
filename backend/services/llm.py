@@ -53,7 +53,7 @@ def get_provider() -> str:
             return "clean"
         return "gemini" if explicit == "google" else ("nova" if explicit == "openai" else explicit)
     # Check for clean api key or cc_ key format
-    clean_key = _env("CLEAN_API_KEY")
+    clean_key = _env("CLEAN_API_KEY") or _env("CLEAN_API")
     if clean_key and clean_key != "your_clean_api_key_here":
         return "clean"
     nova_key = _env("NOVA_API_KEY")
@@ -95,7 +95,7 @@ def list_nova_models() -> List[str]:
     """Return the model ids the configured gateway exposes."""
     from openai import OpenAI
 
-    api_key = _env("CLEAN_API_KEY") or _env("NOVA_API_KEY")
+    api_key = _env("CLEAN_API_KEY") or _env("CLEAN_API") or _env("NOVA_API_KEY")
     base_url = _env("CLEAN_BASE_URL") or _env("NOVA_BASE_URL", DEFAULT_NOVA_BASE_URL)
     client = OpenAI(
         api_key=api_key,
@@ -134,7 +134,7 @@ def get_chat_model(temperature: float = 0.2):
     if provider in ("clean", "nova"):
         from langchain_openai import ChatOpenAI
 
-        api_key = _env("CLEAN_API_KEY") or _env("NOVA_API_KEY")
+        api_key = _env("CLEAN_API_KEY") or _env("CLEAN_API") or _env("NOVA_API_KEY")
         base_url = _env("CLEAN_BASE_URL") or _env("NOVA_BASE_URL", DEFAULT_NOVA_BASE_URL)
         model = _env("CLEAN_MODEL") or _env("NOVA_MODEL") or resolve_nova_model()
 

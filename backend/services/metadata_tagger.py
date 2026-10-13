@@ -26,7 +26,7 @@ def get_llm():
             pass
 
     provider = (os.getenv("LLM_PROVIDER") or "").lower()
-    if provider in ("clean", "nova", "openai") or os.getenv("CLEAN_API_KEY"):
+    if provider in ("clean", "nova", "openai") or os.getenv("CLEAN_API_KEY") or os.getenv("CLEAN_API"):
         try:
             from backend.services.llm import get_chat_model
             return get_chat_model(temperature=0.0)
