@@ -18,14 +18,42 @@ from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_excep
 
 load_dotenv()
 
-# Store database in capabl/database/chromadb
-DB_DIR = os.path.abspath(
-    os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-        "database",
-        "chromadb",
+import shutil
+import tempfile
+
+def _resolve_vector_dir() -> str:
+    default_dir = os.path.abspath(
+        os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "database",
+            "chromadb",
+        )
     )
-)
+    is_serverless = bool(os.getenv("VERCEL") or os.getenv("AWS_LAMBDA_FUNCTION_NAME"))
+    if is_serverless:
+        tmp_dir = os.path.join(tempfile.gettempdir(), "chromadb")
+        try:
+            os.makedirs(tmp_dir, exist_ok=True)
+            orig_store = os.path.join(default_dir, "store.json")
+            tmp_store = os.path.join(tmp_dir, "store.json")
+            if os.path.exists(orig_store) and not os.path.exists(tmp_store):
+                shutil.copy2(orig_store, tmp_store)
+        except Exception:
+            pass
+        return tmp_dir
+
+    try:
+        os.makedirs(default_dir, exist_ok=True)
+        return default_dir
+    except (OSError, PermissionError):
+        tmp_dir = os.path.join(tempfile.gettempdir(), "chromadb")
+        try:
+            os.makedirs(tmp_dir, exist_ok=True)
+        except Exception:
+            pass
+        return tmp_dir
+
+DB_DIR = _resolve_vector_dir()
 STORE_FILE = os.path.join(DB_DIR, "store.json")
 
 _WORD = re.compile(r"[a-z0-9]+")

@@ -295,7 +295,10 @@ def get_schedule(student_id: str):
 
 # Mount frontend
 frontend_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "frontend")
-os.makedirs(frontend_path, exist_ok=True)
+try:
+    os.makedirs(frontend_path, exist_ok=True)
+except Exception:
+    pass
 
 app.mount("/static", StaticFiles(directory=frontend_path), name="static")
 

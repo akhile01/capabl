@@ -1,4 +1,7 @@
+import logging
 from .connections import get_db_connection
+
+logger = logging.getLogger(__name__)
 
 def init_db():
     conn = get_db_connection()
